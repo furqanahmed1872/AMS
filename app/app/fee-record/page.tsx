@@ -28,21 +28,44 @@ export default function FeeRecordPage() {
       <PageHeader title="Fee Record" subtitle="Yearly fee history by class" />
       <Card className="p-4">
         <div className="flex flex-wrap gap-3 items-center">
-          <Select options={classOptions} value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="h-9 min-w-36" />
-          <Select options={yearOptions} value={year} onChange={e => setYear(e.target.value)} className="h-9 min-w-28" />
+          <Select
+            options={classOptions}
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="h-9 min-w-36"
+          />
+          <Select
+            options={yearOptions}
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="h-9 min-w-28"
+          />
         </div>
       </Card>
       <div className="glass-card overflow-x-auto">
         <div className="p-4 border-b border-white/8 flex items-center justify-between">
           <h3 className="section-title">10th Blue · Academic Year {year}</h3>
-          <Button variant="secondary" size="sm" icon={<Download size={14} />}>Download PDF</Button>
+          <Button variant="secondary" size="sm" icon={<Download size={14} />}>
+            Download PDF
+          </Button>
         </div>
         <table className="w-full text-xs">
           <thead className="bg-surface-2">
             <tr>
-              <th className="table-header sticky left-0 bg-surface-2 z-10 min-w-10">Roll</th>
-              <th className="table-header sticky left-10 bg-surface-2 z-10 min-w-32">Name</th>
-              {months.map(m => <th key={m} className="table-header text-center min-w-14">{m}</th>)}
+              <th className="table-header sticky left-0 bg-surface-2 z-10 min-w-10">
+                Roll
+              </th>
+              <th className="table-header sticky left-10 bg-surface-2 z-10 min-w-32">
+                Name
+              </th>
+              {months.map((m) => (
+                <th key={m} className="table-header text-center min-w-14">
+                  {m}
+                </th>
+              ))}
+              <th className="table-header text-center min-w-20 text-emerald-400/60">
+                Grand Total
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -50,26 +73,94 @@ export default function FeeRecordPage() {
               const data = feeData[student.id] || Array(11).fill("—");
               return (
                 <tr key={student.id} className="table-row">
-                  <td className="table-cell sticky left-0 bg-surface-1 font-bold text-white/40">#{student.rollNumber}</td>
-                  <td className="table-cell sticky left-10 bg-surface-1 font-medium">{student.name}</td>
+                  <td className="table-cell sticky left-0 bg-surface-1 font-bold text-white/40">
+                    #{student.rollNumber}
+                  </td>
+                  <td className="table-cell sticky left-10 bg-surface-1 font-medium">
+                    {student.name}
+                  </td>
                   {data.map((val, j) => (
-                    <td key={j} className={`px-2 py-3 text-center font-semibold ${val === "X" ? "text-rose-400" : val === null ? "text-white/20" : "text-emerald-400"}`}>
+                    <td
+                      key={j}
+                      className={`px-2 py-3 text-center font-semibold ${val === "X" ? "text-rose-400" : val === null ? "text-white/20" : "text-emerald-400"}`}
+                    >
                       {val === null ? "—" : val === "X" ? "✗" : val}
                     </td>
                   ))}
+                  <td className="px-2 py-3 text-center text-xs font-bold text-white/60 bg-surface-2">
+                    Rs.{" "}
+                    {(data as (string | number | null)[])
+                      .reduce(
+                        (s: number, v) => s + (typeof v === "number" ? v : 0),
+                        0,
+                      )
+                      .toLocaleString()}
+                  </td>
                 </tr>
               );
             })}
             <tr className="border-t-2 border-brand-500/20 bg-surface-2">
-              <td colSpan={2} className="table-cell font-bold text-white/60 sticky left-0 bg-surface-2">Total</td>
+              <td className="table-cell font-bold text-white/60 sticky left-0 bg-surface-2">
+                Total
+              </td>
+              <td className="table-cell font-bold text-white/60 sticky left-10 bg-surface-2">
+                Monthly
+              </td>
               {months.map((m, j) => {
                 const total = students.reduce((sum, s) => {
                   const val = (feeData[s.id] || [])[j];
                   return sum + (typeof val === "number" ? val : 0);
                 }, 0);
-                return <td key={m} className="px-2 py-3 text-center text-xs font-bold text-brand-400">{total > 0 ? total.toLocaleString() : "—"}</td>;
+                return (
+                  <td
+                    key={m}
+                    className="px-2 py-3 text-center text-xs font-bold text-brand-400"
+                  >
+                    {total > 0 ? total.toLocaleString() : "—"}
+                  </td>
+                );
               })}
             </tr>
+            {/* Grand Total */}
+            {(() => {
+              const grandTotal = students.reduce((sum, s) => {
+                return (
+                  sum +
+                  (feeData[s.id] || []).reduce(
+                    (ms: number, val) =>
+                      ms + (typeof val === "number" ? val : 0),
+                    0,
+                  )
+                );
+              }, 0);
+              const monthTotals = months.map((_, j) =>
+                students.reduce((sum, s) => {
+                  const val = (feeData[s.id] || [])[j];
+                  return sum + (typeof val === "number" ? val : 0);
+                }, 0),
+              );
+              return (
+                <tr className="border-t-2 border-emerald-500/30 bg-emerald-500/5">
+                  <td className="table-cell font-bold text-emerald-400 sticky left-0 bg-emerald-500/5">
+                    Grand
+                  </td>
+                  <td className="table-cell font-bold text-emerald-400 sticky left-10 bg-emerald-500/5">
+                    Total
+                  </td>
+                  {monthTotals.map((t, j) => (
+                    <td
+                      key={j}
+                      className="px-2 py-3 text-center text-xs font-bold text-emerald-400"
+                    >
+                      {t > 0 ? `${t.toLocaleString()}` : "—"}
+                    </td>
+                  ))}
+                  <td className="px-2 py-3 text-center text-sm font-bold text-emerald-300 bg-emerald-500/10 rounded">
+                    Rs. {grandTotal.toLocaleString()}
+                  </td>
+                </tr>
+              );
+            })()}
           </tbody>
         </table>
       </div>

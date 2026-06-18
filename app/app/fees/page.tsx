@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -62,22 +63,43 @@ export default function FeesPage() {
             const isPaid = paidIds.has(student.id);
             const isNotSet = !student.monthlyFee;
             return (
-              <div key={student.id} className="flex items-center gap-4 px-4 py-3.5">
-                <span className="text-xs font-bold text-white/30 w-6">#{student.rollNumber}</span>
+              <div
+                key={student.id}
+                className="flex items-center gap-4 px-4 py-3.5"
+              >
+                <span className="text-xs font-bold text-white/30 w-6">
+                  #{student.rollNumber}
+                </span>
                 <Avatar name={student.name} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white">{student.name}</p>
+                  <p className="text-sm font-medium text-white">
+                    {student.name}
+                  </p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {student.monthlyFee && <span className="text-xs text-white/40">{formatCurrency(student.monthlyFee)}/mo</span>}
+                    {student.monthlyFee && (
+                      <span className="text-xs text-white/40">
+                        {formatCurrency(student.monthlyFee)}/mo
+                      </span>
+                    )}
                     <span className="text-xs text-white/30">Prev: Paid</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {isNotSet ? (
-                    <div className="flex items-center gap-1.5">
-                      <AlertTriangle size={14} className="text-amber-400" />
-                      <span className="text-xs text-amber-400">Fee Not Set</span>
-                    </div>
+                    <Link href={`/app/students/${student.id}/edit`}>
+                      <div className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 px-3 py-1.5 rounded-xl cursor-pointer transition-all group">
+                        <AlertTriangle
+                          size={13}
+                          className="text-amber-400 shrink-0"
+                        />
+                        <span className="text-xs text-amber-400 font-medium">
+                          Fee Not Set
+                        </span>
+                        <span className="text-xs text-amber-400/50 group-hover:text-amber-400 transition-colors">
+                          → Set Now
+                        </span>
+                      </div>
+                    </Link>
                   ) : isPaid ? (
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 size={14} className="text-emerald-400" />
@@ -89,7 +111,13 @@ export default function FeesPage() {
                         <Clock size={14} className="text-rose-400" />
                         <Badge variant="unpaid">Unpaid</Badge>
                       </div>
-                      <Button size="sm" icon={<DollarSign size={12} />} onClick={() => setConfirmPay(student)}>Pay</Button>
+                      <Button
+                        size="sm"
+                        icon={<DollarSign size={12} />}
+                        onClick={() => setConfirmPay(student)}
+                      >
+                        Pay
+                      </Button>
                     </div>
                   )}
                 </div>
