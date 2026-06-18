@@ -26,11 +26,13 @@ const sizes = {
 export function Button({ variant = "primary", size = "md", loading, icon, iconRight, children, className, disabled, ...props }: ButtonProps) {
   return (
     <button
+      type={props.type || "button"}
       className={cn(
-        "font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center",
-        variants[variant], sizes[size],
+        "font-semibold transition-all duration-200 active:scale-95 flex items-center justify-center cursor-pointer",
+        variants[variant],
+        sizes[size],
         (disabled || loading) && "opacity-50 cursor-not-allowed",
-        className
+        className,
       )}
       disabled={disabled || loading}
       {...props}
