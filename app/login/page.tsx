@@ -1,14 +1,17 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { GraduationCap, Shield, Users, Eye, EyeOff, ArrowLeft, ChevronDown } from "lucide-react";
+import { GraduationCap, Shield, Users, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { loginAction } from "@/lib/auth/actions";
 
 type Role = "admin" | "teacher";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [role, setRole] = useState<Role>("admin");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -18,10 +21,18 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setLoading(true);
     setError("");
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false);
-    if (password === "demo") window.location.href = "/app/dashboard";
-    else setError("Incorrect password. Try 'demo' for demonstration.");
+
+    const result = await loginAction(role, password);
+
+    if (result.success) {
+      router.push("/app/dashboard");
+      // intentionally not resetting `loading` here — the redirect plus
+      // the bootstrap fetch in app/app/layout.tsx covers the transition,
+      // so this button stays in its loading state until the new page is ready.
+    } else {
+      setLoading(false);
+      setError(result.error ?? "Incorrect password.");
+    }
   };
 
   return (
@@ -32,14 +43,11 @@ export default function LoginPage() {
       <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-violet-600/10 rounded-full blur-3xl" />
 
       <div className="relative w-full max-w-md">
-        {/* Back to home */}
         <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white text-sm mb-8 transition-colors">
           <ArrowLeft size={14} />Back to home
         </Link>
 
-        {/* Card */}
         <div className="glass-card p-8 animate-scale-in">
-          {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center shadow-glow mb-4">
               <GraduationCap size={28} className="text-white" />
@@ -55,7 +63,7 @@ export default function LoginPage() {
               {([
                 { value: "admin" as Role, label: "Admin", icon: <Shield size={15} /> },
                 { value: "teacher" as Role, label: "Teacher", icon: <Users size={15} /> },
-              ] as const).map(opt => (
+              ] as const).map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => { setRole(opt.value); setError(""); }}
@@ -77,8 +85,8 @@ export default function LoginPage() {
               type={showPass ? "text" : "password"}
               placeholder="Enter password"
               value={password}
-              onChange={e => { setPassword(e.target.value); setError(""); }}
-              onKeyDown={e => e.key === "Enter" && handleLogin()}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               iconRight={
                 <button type="button" onClick={() => setShowPass(!showPass)} className="text-white/40 hover:text-white transition-colors">
                   {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -86,7 +94,6 @@ export default function LoginPage() {
               }
               error={error}
             />
-            <p className="text-xs text-white/30 mt-2">🔑 Demo: type <code className="bg-surface-3 px-1.5 py-0.5 rounded text-brand-400">demo</code> as the password</p>
           </div>
 
           <Button className="w-full" loading={loading} onClick={handleLogin}>

@@ -5,22 +5,67 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import {
-  Users, GraduationCap, BookOpen, TrendingUp, TrendingDown,
-  Calendar, Plus, DollarSign, ArrowRight, Bell, CheckCircle2, AlertCircle
+  Users,
+  GraduationCap,
+  BookOpen,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  Plus,
+  DollarSign,
+  ArrowRight,
+  Bell,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
-import {
-  DASHBOARD_STATS,
-  STUDENTS,
-  NOTIFICATIONS,
-  TESTS,
-} from "@/lib/dummy-data";
+import { useAcademyData } from "@/lib/academy-data/provider";
 import { formatCurrency, getCurrentMonthYear } from "@/lib/utils";
 
-const role: "admin" | "teacher" = "admin"; // Toggle to "teacher" to test
-
 export default function DashboardPage() {
-  const recentStudents = STUDENTS.slice(0, 5);
-  const unresolved = NOTIFICATIONS.filter(n => !n.isResolved);
+  // Same shapes the dummy arrays used to provide — DASHBOARD_STATS,
+  // STUDENTS, NOTIFICATIONS, TESTS — now backed by the real bootstrap
+  // fetch in app/app/layout.tsx.
+  const {
+    role,
+    students,
+    tests,
+    notifications,
+    dashboardStats,
+    todaysAttendance,
+  } = useAcademyData();
+
+  // "Recent" wasn't actually sorted in the dummy version (it just took the
+  // first 5 in declaration order) — sorting by admission date descending
+  // makes "Recent Students" mean what it says now that the data is real.
+  const recentStudents = [...students]
+    .sort(
+      (a, b) =>
+        new Date(b.admissionDate).getTime() -
+        new Date(a.admissionDate).getTime(),
+    )
+    .slice(0, 5);
+  const recentTests = tests.slice(0, 5); // tests[] is already ordered by date desc
+
+  const unresolved = notifications.filter((n) => !n.isResolved);
+
+  // The "+3 this month" trend was a hardcoded string in the dummy UI —
+  // this computes the real count of students admitted in the current month.
+  const now = new Date();
+  const newThisMonth = students.filter((s) => {
+    const d = new Date(s.admissionDate);
+    return (
+      d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+  const todaysTotal =
+    todaysAttendance.present + todaysAttendance.absent + todaysAttendance.leave;
+  const feeTotal =
+    dashboardStats.collectedThisMonth + dashboardStats.dueThisMonth;
+  const collectionRate =
+    feeTotal > 0
+      ? Math.round((dashboardStats.collectedThisMonth / feeTotal) * 100)
+      : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -66,20 +111,20 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           label="Active Students"
-          value={DASHBOARD_STATS.activeStudents}
+          value={dashboardStats.activeStudents}
           icon={<Users size={18} />}
           accentColor="text-brand-400"
-          trend={{ value: "+3 this month", up: true }}
+          trend={{ value: `+${newThisMonth} this month`, up: true }}
         />
         <StatCard
           label="Total Classes"
-          value={DASHBOARD_STATS.totalClasses}
+          value={dashboardStats.totalClasses}
           icon={<GraduationCap size={18} />}
           accentColor="text-violet-400"
         />
         <StatCard
           label="Total Tests"
-          value={DASHBOARD_STATS.totalTests}
+          value={dashboardStats.totalTests}
           icon={<BookOpen size={18} />}
           accentColor="text-cyan-400"
         />
@@ -87,13 +132,13 @@ export default function DashboardPage() {
           <>
             <StatCard
               label="Collected (this month)"
-              value={formatCurrency(DASHBOARD_STATS.collectedThisMonth)}
+              value={formatCurrency(dashboardStats.collectedThisMonth)}
               icon={<TrendingUp size={18} />}
               accentColor="text-emerald-400"
             />
             <StatCard
               label="Due (this month)"
-              value={formatCurrency(DASHBOARD_STATS.dueThisMonth)}
+              value={formatCurrency(dashboardStats.dueThisMonth)}
               icon={<TrendingDown size={18} />}
               accentColor="text-rose-400"
             />
@@ -215,7 +260,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {TESTS.slice(0, 5).map((test) => (
+            {recentTests.map((test) => (
               <div
                 key={test.id}
                 className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0"
@@ -240,7 +285,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent Attendance */}
+        {/* Today's Attendance */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title">Today's Attendance</h2>
@@ -258,21 +303,21 @@ export default function DashboardPage() {
             {[
               {
                 label: "Present",
-                count: 89,
+                count: todaysAttendance.present,
                 color: "text-emerald-400",
                 bg: "bg-emerald-500/10",
                 bar: "bg-emerald-500",
               },
               {
                 label: "Absent",
-                count: 18,
+                count: todaysAttendance.absent,
                 color: "text-rose-400",
                 bg: "bg-rose-500/10",
                 bar: "bg-rose-500",
               },
               {
                 label: "Leave",
-                count: 5,
+                count: todaysAttendance.leave,
                 color: "text-amber-400",
                 bg: "bg-amber-500/10",
                 bar: "bg-amber-500",
@@ -292,7 +337,9 @@ export default function DashboardPage() {
                 <div className="h-1.5 bg-surface-3 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${bar} rounded-full`}
-                    style={{ width: `${(count / 112) * 100}%` }}
+                    style={{
+                      width: `${todaysTotal > 0 ? (count / todaysTotal) * 100 : 0}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -301,7 +348,9 @@ export default function DashboardPage() {
           <div className="text-center py-2 bg-surface-2 rounded-xl">
             <span className="text-xs text-white/40">
               Total:{" "}
-              <span className="text-white/70 font-semibold">112 students</span>
+              <span className="text-white/70 font-semibold">
+                {todaysTotal} students
+              </span>
             </span>
           </div>
         </div>
@@ -330,7 +379,7 @@ export default function DashboardPage() {
                   <span className="text-sm text-white/70">Collected</span>
                 </div>
                 <span className="text-sm font-semibold text-emerald-400">
-                  {formatCurrency(DASHBOARD_STATS.collectedThisMonth)}
+                  {formatCurrency(dashboardStats.collectedThisMonth)}
                 </span>
               </div>
               <div className="flex items-center justify-between py-3 px-4 bg-rose-500/5 border border-rose-500/15 rounded-xl">
@@ -339,7 +388,7 @@ export default function DashboardPage() {
                   <span className="text-sm text-white/70">Pending</span>
                 </div>
                 <span className="text-sm font-semibold text-rose-400">
-                  {formatCurrency(DASHBOARD_STATS.dueThisMonth)}
+                  {formatCurrency(dashboardStats.dueThisMonth)}
                 </span>
               </div>
               <div className="flex items-center justify-between py-3 px-4 bg-surface-2 rounded-xl">
@@ -348,19 +397,11 @@ export default function DashboardPage() {
                   <div className="w-20 h-1.5 bg-surface-3 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-brand-600 to-emerald-500 rounded-full"
-                      style={{
-                        width: `${Math.round((DASHBOARD_STATS.collectedThisMonth / (DASHBOARD_STATS.collectedThisMonth + DASHBOARD_STATS.dueThisMonth)) * 100)}%`,
-                      }}
+                      style={{ width: `${collectionRate}%` }}
                     />
                   </div>
                   <span className="text-sm font-bold text-white">
-                    {Math.round(
-                      (DASHBOARD_STATS.collectedThisMonth /
-                        (DASHBOARD_STATS.collectedThisMonth +
-                          DASHBOARD_STATS.dueThisMonth)) *
-                        100,
-                    )}
-                    %
+                    {collectionRate}%
                   </span>
                 </div>
               </div>

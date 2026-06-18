@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Calendar, DollarSign, FileText,
   BarChart3, BookOpen, LogOut, Bell, GraduationCap, X, Menu
 } from "lucide-react";
 import { useState } from "react";
+import { logoutAction } from "@/lib/auth/actions";
 
 interface NavItem {
   href: string;
@@ -31,13 +32,20 @@ const navItems: NavItem[] = [
 interface SidebarProps {
   role?: "admin" | "teacher";
   notifications?: number;
+  academyName?: string;
 }
 
-export function Sidebar({ role = "admin", notifications = 1 }: SidebarProps) {
+export function Sidebar({ role = "admin", notifications = 1, academyName = "Academy" }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleItems = navItems.filter(item => !item.adminOnly || role === "admin");
+  const visibleItems = navItems.filter((item) => !item.adminOnly || role === "admin");
+
+  const handleSignOut = async () => {
+    await logoutAction();
+    router.push("/login");
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -48,7 +56,7 @@ export function Sidebar({ role = "admin", notifications = 1 }: SidebarProps) {
             <GraduationCap size={18} className="text-white" />
           </div>
           <div>
-            <div className="font-bold text-sm font-display text-white">Superior Academy</div>
+            <div className="font-bold text-sm font-display text-white">{academyName}</div>
             <div className="text-xs text-white/40 capitalize">{role} panel</div>
           </div>
         </div>
@@ -82,10 +90,10 @@ export function Sidebar({ role = "admin", notifications = 1 }: SidebarProps) {
             {notifications > 0 && <span className="bg-rose-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{notifications}</span>}
           </Link>
         )}
-        <Link href="/login" className="nav-item text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10">
+        <button onClick={handleSignOut} className="nav-item text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 w-full">
           <LogOut size={18} />
           Sign Out
-        </Link>
+        </button>
         <div className="px-3 pt-2">
           <div className="bg-surface-2 rounded-lg px-3 py-2 text-xs text-white/30">
             AMS v1.0 · {new Date().getFullYear()}
@@ -108,7 +116,7 @@ export function Sidebar({ role = "admin", notifications = 1 }: SidebarProps) {
           <div className="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center shadow-glow">
             <GraduationCap size={15} className="text-white" />
           </div>
-          <span className="font-bold text-sm font-display">Superior Academy</span>
+          <span className="font-bold text-sm font-display">{academyName}</span>
         </div>
         <button onClick={() => setMobileOpen(true)} className="p-2 hover:bg-white/8 rounded-lg transition-colors">
           <Menu size={20} />

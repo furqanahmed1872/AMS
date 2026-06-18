@@ -1,9 +1,15 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { CLASSES, SUBJECTS } from "@/lib/dummy-data";
+import { useAcademyData } from "@/lib/academy-data/provider";
+import { createClassAction, deleteClassAction } from "@/lib/classes/actions";
+import {
+  createSubjectAction,
+  deleteSubjectAction,
+} from "@/lib/subjects/actions";
 import {
   Plus,
   Trash2,
@@ -14,18 +20,23 @@ import {
 } from "lucide-react";
 
 export default function ClassesPage() {
-  const [classes, setClasses] = useState(CLASSES);
-  const [subjects, setSubjects] = useState(SUBJECTS);
+  const router = useRouter();
+  // classes/subjects used to be useState(CLASSES)/useState(SUBJECTS) — now
+  // read straight from the real bootstrap data; router.refresh() after each
+  // mutation pulls a fresh copy through app/app/layout.tsx.
+  const { classes, subjects } = useAcademyData();
 
   // Class form state
   const [showClassForm, setShowClassForm] = useState(false);
   const [newClass, setNewClass] = useState({ name: "", section: "" });
   const [classError, setClassError] = useState("");
+  const [isAddingClass, setIsAddingClass] = useState(false);
 
   // Subject form state
   const [showSubjectForm, setShowSubjectForm] = useState(false);
   const [newSubject, setNewSubject] = useState("");
   const [subjectError, setSubjectError] = useState("");
+  const [isAddingSubject, setIsAddingSubject] = useState(false);
 
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -33,8 +44,10 @@ export default function ClassesPage() {
     id: string;
     name: string;
   } | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const addClass = () => {
+  const addClass = async () => {
     if (!newClass.name.trim()) {
       setClassError("Class name is required");
       return;
@@ -42,7 +55,8 @@ export default function ClassesPage() {
     const displayName = newClass.section.trim()
       ? `${newClass.name.trim()} ${newClass.section.trim()}`
       : newClass.name.trim();
-    // Check for duplicate
+    // Quick client-side check against what's already loaded — the unique
+    // index in the database is still the authoritative check underneath.
     const exists = classes.find(
       (c) => c.displayName.toLowerCase() === displayName.toLowerCase(),
     );
@@ -50,22 +64,26 @@ export default function ClassesPage() {
       setClassError("A class with this name and section already exists");
       return;
     }
-    setClasses((prev) => [
-      ...prev,
-      {
-        id: `c${Date.now()}`,
-        name: newClass.name.trim(),
-        section: newClass.section.trim() || undefined,
-        displayName,
-        studentCount: 0,
-      },
-    ]);
+
+    setIsAddingClass(true);
+    const result = await createClassAction(
+      newClass.name.trim(),
+      newClass.section.trim(),
+    );
+    setIsAddingClass(false);
+
+    if (!result.success) {
+      setClassError(result.error ?? "Something went wrong.");
+      return;
+    }
+
     setNewClass({ name: "", section: "" });
     setClassError("");
     setShowClassForm(false);
+    router.refresh();
   };
 
-  const addSubject = () => {
+  const addSubject = async () => {
     if (!newSubject.trim()) {
       setSubjectError("Subject name is required");
       return;
@@ -77,21 +95,40 @@ export default function ClassesPage() {
       setSubjectError("This subject already exists");
       return;
     }
-    setSubjects((prev) => [
-      ...prev,
-      { id: `s${Date.now()}`, name: newSubject.trim() },
-    ]);
+
+    setIsAddingSubject(true);
+    const result = await createSubjectAction(newSubject.trim());
+    setIsAddingSubject(false);
+
+    if (!result.success) {
+      setSubjectError(result.error ?? "Something went wrong.");
+      return;
+    }
+
     setNewSubject("");
     setSubjectError("");
     setShowSubjectForm(false);
+    router.refresh();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    if (deleteTarget.type === "class")
-      setClasses((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-    else setSubjects((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+
+    setIsDeleting(true);
+    const result =
+      deleteTarget.type === "class"
+        ? await deleteClassAction(deleteTarget.id)
+        : await deleteSubjectAction(deleteTarget.id);
+    setIsDeleting(false);
+
+    if (!result.success) {
+      setDeleteError(result.error ?? "Something went wrong.");
+      return;
+    }
+
     setDeleteTarget(null);
+    setDeleteError("");
+    router.refresh();
   };
 
   return (
@@ -207,9 +244,11 @@ export default function ClassesPage() {
                   <button
                     type="button"
                     onClick={addClass}
-                    className="flex-1 py-2 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-glow transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                    disabled={isAddingClass}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-glow transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <Plus size={14} /> Add Class
+                    <Plus size={14} />{" "}
+                    {isAddingClass ? "Adding..." : "Add Class"}
                   </button>
                 </div>
               </div>
@@ -341,10 +380,12 @@ export default function ClassesPage() {
                   <button
                     type="button"
                     onClick={addSubject}
-                    className="flex-1 py-2 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                    disabled={isAddingSubject}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
                     style={{ boxShadow: "0 0 20px rgba(139,92,246,0.25)" }}
                   >
-                    <Plus size={14} /> Add Subject
+                    <Plus size={14} />{" "}
+                    {isAddingSubject ? "Adding..." : "Add Subject"}
                   </button>
                 </div>
               </div>
@@ -426,10 +467,17 @@ export default function ClassesPage() {
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          setDeleteTarget(null);
+          setDeleteError("");
+        }}
         onConfirm={handleDelete}
+        loading={isDeleting}
         title={`Delete ${deleteTarget?.type === "class" ? "Class" : "Subject"}`}
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone and may affect existing student and test records.`}
+        message={
+          deleteError ||
+          `Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone and may affect existing student and test records.`
+        }
         confirmLabel="Delete"
         danger
       />
