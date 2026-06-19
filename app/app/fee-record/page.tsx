@@ -70,7 +70,7 @@ export default function FeeRecordPage() {
 
   // Column totals (sum of paid amounts per month)
   const monthTotals = monthLabels.map((_, j) =>
-    (rows ?? []).reduce((sum, s) => {
+    (rows ?? []).reduce<number>((sum, s) => {
       const val = s.cells[j];
       return sum + (typeof val === "number" ? val : 0);
     }, 0),
@@ -143,7 +143,7 @@ export default function FeeRecordPage() {
             </thead>
             <tbody>
               {rows.map((student) => {
-                const studentTotal = student.cells.reduce(
+                const studentTotal = student.cells.reduce<number>(
                   (sum, val) => sum + (typeof val === "number" ? val : 0),
                   0,
                 );

@@ -51,7 +51,7 @@ export function FeeRecordPDF({
   };
 
   const monthTotals = MONTH_LABELS.map((_, j) =>
-    rows.reduce(
+    rows.reduce<number>(
       (sum, r) =>
         sum + (typeof r.cells[j] === "number" ? (r.cells[j] as number) : 0),
       0,
@@ -137,7 +137,7 @@ export function FeeRecordPDF({
           </thead>
           <tbody>
             {rows.map((row, i) => {
-              const total = row.cells.reduce(
+              const total = row.cells.reduce<number>(
                 (s, v) => s + (typeof v === "number" ? v : 0),
                 0,
               );
