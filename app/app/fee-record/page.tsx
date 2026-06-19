@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
 import { useAcademyData } from "@/lib/academy-data/provider";
-import {
-  getFeeRecordAction
-} from "@/lib/fees/fee-record-actions";
+import { getFeeRecordAction } from "@/lib/fees/fee-record-actions";
 import type { FeeRecordStudent } from "@/lib/fees/types";
 import { ACADEMIC_MONTHS } from "@/lib/fees/types";
 import { Download } from "lucide-react";
+import { FeeRecordPDF } from "@/components/templates/pdf/FeeRecordPDF";
+import { exportElementAsPDF } from "@/lib/export/utils";
 
 // Academic year: May of startYear through March of startYear+1
 const monthLabels = ACADEMIC_MONTHS.map((m) => m.label);
@@ -29,8 +29,8 @@ function buildYearOptions() {
 const yearOptions = buildYearOptions();
 
 export default function FeeRecordPage() {
-  const { classes } = useAcademyData();
-
+  const { classes, academyName } = useAcademyData();
+  const [exportingPDF, setExportingPDF] = useState(false);
   const [selectedClass, setSelectedClass] = useState(classes[0]?.id ?? "");
   const [year, setYear] = useState(yearOptions[0].value);
   const [rows, setRows] = useState<FeeRecordStudent[] | null>(null);
@@ -44,6 +44,17 @@ export default function FeeRecordPage() {
   const selectedClassName =
     classes.find((c) => c.id === selectedClass)?.displayName ?? "";
   const yearLabel = yearOptions.find((y) => y.value === year)?.label ?? year;
+
+  const handleExportPDF = async () => {
+    if (!rows || rows.length === 0) return;
+    setExportingPDF(true);
+    await exportElementAsPDF(
+      "fee-record-pdf-template",
+      `FeeRecord_${selectedClassName}_${yearLabel}`,
+      "landscape",
+    );
+    setExportingPDF(false);
+  };
 
   const load = useCallback(async () => {
     if (!selectedClass) return;
@@ -92,7 +103,13 @@ export default function FeeRecordPage() {
           <h3 className="section-title">
             {selectedClassName} · Academic Year {yearLabel}
           </h3>
-          <Button variant="secondary" size="sm" icon={<Download size={14} />}>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Download size={14} />}
+            loading={exportingPDF}
+            onClick={handleExportPDF}
+          >
             Download PDF
           </Button>
         </div>
@@ -210,6 +227,15 @@ export default function FeeRecordPage() {
           </table>
         )}
       </div>
+
+      {rows && rows.length > 0 && (
+        <FeeRecordPDF
+          academyName={academyName}
+          className={selectedClassName}
+          yearLabel={yearLabel}
+          rows={rows}
+        />
+      )}
     </div>
   );
 }

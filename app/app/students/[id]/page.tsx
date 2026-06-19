@@ -35,6 +35,9 @@ import {
   BookOpen,
   UserMinus,
 } from "lucide-react";
+import { StudentScoreCard } from "@/components/templates/share/StudentScoreCard";
+import { StudentAttendanceCard } from "@/components/templates/share/StudentAttendanceCard";
+import { shareElementAsImage } from "@/lib/export/utils";
 
 export default function StudentProfilePage({
   params,
@@ -43,7 +46,7 @@ export default function StudentProfilePage({
 }) {
   const { id } = React.use(params);
   const router = useRouter();
-  const { role, students } = useAcademyData();
+  const { role, students, academyName } = useAcademyData();
   const student = students.find((s) => s.id === id);
 
   const [activeModal, setActiveModal] = useState<
@@ -58,6 +61,7 @@ export default function StudentProfilePage({
 
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const openModal = async (type: "score" | "attendance" | "fee") => {
     setActiveModal(type);
@@ -76,6 +80,28 @@ export default function StudentProfilePage({
       setFeeHistory(await getStudentFeeHistory(id));
       setModalLoading(false);
     }
+  };
+
+  const handleShareScore = async () => {
+    if (!scores || scores.length === 0 || !student) return;
+    const s = student;
+    setSharing(true);
+    await shareElementAsImage(
+      "student-score-share-card",
+      `${s.name}'s Test Scores — ${s.class}\nAverage: ${s.avgScore}%\n\nShared via Academy Management System`,
+    );
+    setSharing(false);
+  };
+
+  const handleShareAttendance = async () => {
+    if (!attendance || attendance.length === 0 || !student) return;
+    const s = student;
+    setSharing(true);
+    await shareElementAsImage(
+      "student-attendance-share-card",
+      `${s.name}'s Attendance — ${s.class}\nOverall: ${s.attendancePercent}%\n\nShared via Academy Management System`,
+    );
+    setSharing(false);
   };
 
   const handleDeactivate = async () => {
@@ -150,7 +176,6 @@ export default function StudentProfilePage({
           </div>
         }
       />
-
       {/* Profile card */}
       <Card className="p-5">
         <div className="flex items-center gap-4">
@@ -178,7 +203,6 @@ export default function StudentProfilePage({
           </div>
         </div>
       </Card>
-
       {/* 3 Summary Boxes */}
       <div className="grid grid-cols-3 gap-3">
         <Card
@@ -244,7 +268,6 @@ export default function StudentProfilePage({
           <div className="text-xs text-white/50 mt-1">Fee Status</div>
         </Card>
       </div>
-
       {/* Profile Details */}
       <Card className="p-5">
         <h3 className="section-title mb-4">Profile Details</h3>
@@ -293,7 +316,6 @@ export default function StudentProfilePage({
           ))}
         </div>
       </Card>
-
       {/* Score Modal */}
       <Modal
         isOpen={activeModal === "score"}
@@ -338,11 +360,12 @@ export default function StudentProfilePage({
           variant="secondary"
           className="w-full mt-4"
           icon={<Share2 size={14} />}
+          loading={sharing}
+          onClick={handleShareScore}
         >
           Share via WhatsApp
         </Button>
       </Modal>
-
       {/* Attendance Modal */}
       <Modal
         isOpen={activeModal === "attendance"}
@@ -378,11 +401,12 @@ export default function StudentProfilePage({
           variant="secondary"
           className="w-full mt-4"
           icon={<Share2 size={14} />}
+          loading={sharing}
+          onClick={handleShareAttendance}
         >
           Share via WhatsApp
         </Button>
       </Modal>
-
       {/* Fee History Modal — admin only */}
       {role === "admin" && (
         <Modal
@@ -421,7 +445,6 @@ export default function StudentProfilePage({
           )}
         </Modal>
       )}
-
       {/* Deactivate Confirm */}
       <ConfirmDialog
         isOpen={showDeactivate}
@@ -433,6 +456,27 @@ export default function StudentProfilePage({
         confirmLabel="Deactivate"
         danger
       />
+      {/* Score & Attendance Cards */}
+      {scores && scores.length > 0 && (
+        <StudentScoreCard
+          academyName={academyName}
+          studentName={student.name}
+          className={student.class}
+          rollNumber={student.rollNumber}
+          avgScore={student.avgScore}
+          scores={scores}
+        />
+      )}
+      {attendance && attendance.length > 0 && (
+        <StudentAttendanceCard
+          academyName={academyName}
+          studentName={student.name}
+          className={student.class}
+          rollNumber={student.rollNumber}
+          attendancePercent={student.attendancePercent}
+          months={attendance}
+        />
+      )}
     </div>
   );
 }

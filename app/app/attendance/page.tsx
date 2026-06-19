@@ -23,6 +23,8 @@ import {
   Save,
   Download,
 } from "lucide-react";
+import { AttendancePDF } from "@/components/templates/pdf/AttendancePDF";
+import { exportElementAsPDF } from "@/lib/export/utils";
 
 const statusVariantMap: Record<AttendanceStatus, string> = {
   P: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
@@ -31,8 +33,8 @@ const statusVariantMap: Record<AttendanceStatus, string> = {
 };
 
 export default function AttendancePage() {
-  const { classes, students } = useAcademyData();
-
+  const { classes, students, academyName } = useAcademyData();
+  const [exportingPDF, setExportingPDF] = useState(false);
   const today = new Date().toISOString().split("T")[0];
 
   // ── Shared state ──────────────────────────────────────────────
@@ -142,6 +144,17 @@ export default function AttendancePage() {
     setMonthlyRows(rows);
     setLoadingMonthly(false);
   }, [selectedClass, monthInput]);
+
+  const handleExportPDF = async () => {
+    if (!monthlyRows || monthlyRows.length === 0) return;
+    setExportingPDF(true);
+    await exportElementAsPDF(
+      "attendance-pdf-template",
+      `Attendance_${selectedClassName}_${monthLabel}`,
+      "landscape",
+    );
+    setExportingPDF(false);
+  };
 
   useEffect(() => {
     if (activeTab === "monthly") loadMonthly();
@@ -375,6 +388,8 @@ export default function AttendancePage() {
                 variant="secondary"
                 size="sm"
                 icon={<Download size={14} />}
+                loading={exportingPDF}
+                onClick={handleExportPDF}
               >
                 Download PDF
               </Button>
@@ -462,6 +477,17 @@ export default function AttendancePage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Hidden PDF template for export */}
+      {monthlyRows && monthlyRows.length > 0 && (
+        <AttendancePDF
+          academyName={academyName}
+          className={selectedClassName}
+          monthLabel={monthLabel}
+          daysInMonth={daysInMonth}
+          rows={monthlyRows}
+        />
       )}
     </div>
   );
