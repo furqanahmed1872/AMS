@@ -19,6 +19,8 @@ import {
   TrendingDown,
   Minus,
 } from "lucide-react";
+import { StudentAnalyticsCard } from "@/components/templates/share/StudentAnalyticsCard";
+import { shareElementAsImage } from "@/lib/export/utils";
 
 // SVG line chart helpers — identical to the original implementation
 const W = 400;
@@ -66,7 +68,7 @@ export default function AnalyticsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = React.use(params);
-  const { students } = useAcademyData();
+  const { students, academyName } = useAcademyData();
   const student = students.find((s) => s.id === id);
 
   const [scores, setScores] = useState<ScoreBySubject[] | null>(null);
@@ -74,6 +76,7 @@ export default function AnalyticsPage({
     AttendanceByMonth[] | null
   >(null);
   const [loading, setLoading] = useState(true);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -123,6 +126,17 @@ export default function AnalyticsPage({
     };
   });
 
+  const handleShare = async () => {
+    if (!student) return;
+    const s = student;
+    setSharing(true);
+    await shareElementAsImage(
+      "student-analytics-share-card",
+      `${s.name}'s Analytics — ${s.class}\nAvg Score: ${s.avgScore}% · Attendance: ${s.attendancePercent}%\n\nShared via Academy Management System`,
+    );
+    setSharing(false);
+  };
+
   // Shape attendance into stacked bar data
   const attendanceData = (attendanceMonths ?? []).map((m) => ({
     month: m.month.split(" ")[0].slice(0, 3), // "June 2026" -> "Jun"
@@ -163,7 +177,13 @@ export default function AnalyticsPage({
           </Link>
         }
         actions={
-          <Button variant="secondary" icon={<Share2 size={14} />} size="sm">
+          <Button
+            variant="secondary"
+            icon={<Share2 size={14} />}
+            size="sm"
+            loading={sharing}
+            onClick={handleShare}
+          >
             Share via WhatsApp
           </Button>
         }
@@ -423,6 +443,20 @@ export default function AnalyticsPage({
             })}
           </div>
         </Card>
+      )}
+
+      {!loading && student && (
+        <StudentAnalyticsCard
+          academyName={academyName}
+          studentName={student.name}
+          className={student.class}
+          rollNumber={student.rollNumber}
+          avgScore={student.avgScore}
+          attendancePercent={student.attendancePercent}
+          totalTests={totalTests}
+          scores={scores ?? []}
+          months={attendanceMonths ?? []}
+        />
       )}
     </div>
   );
