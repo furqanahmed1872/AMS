@@ -1,15 +1,14 @@
 "use client";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
-import { STUDENTS, CLASSES } from "@/lib/dummy-data";
+import { useAcademyData } from "@/lib/academy-data/provider";
+import { updateStudentAction } from "@/lib/students/actions";
 import { ArrowLeft, Save } from "lucide-react";
-
-const role: "admin" | "teacher" = "admin";
 
 export default function EditStudentPage({
   params,
@@ -17,25 +16,61 @@ export default function EditStudentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = React.use(params);
-  const student = STUDENTS.find((s) => s.id === id) || STUDENTS[0];
-  const classOptions = CLASSES.map((c) => ({
+  const router = useRouter();
+  const { role, students, classes } = useAcademyData();
+
+  const student = students.find((s) => s.id === id);
+  const classOptions = classes.map((c) => ({
     value: c.id,
     label: c.displayName,
   }));
+
   const [form, setForm] = useState({
-    name: student.name,
-    fatherName: student.fatherName,
-    classId: student.classId,
-    rollNumber: String(student.rollNumber),
-    monthlyFee: String(student.monthlyFee || ""),
-    admissionDate: student.admissionDate,
-    phone: student.phone,
-    address: student.address,
-    teacherRemarks: student.teacherRemarks || "",
-    status: student.status,
+    name: student?.name ?? "",
+    fatherName: student?.fatherName ?? "",
+    classId: student?.classId ?? "",
+    rollNumber: String(student?.rollNumber ?? ""),
+    monthlyFee: String(student?.monthlyFee ?? ""),
+    admissionDate: student?.admissionDate ?? "",
+    phone: student?.phone ?? "",
+    address: student?.address ?? "",
+    teacherRemarks: student?.teacherRemarks ?? "",
+    status: (student?.status ?? "active") as "active" | "inactive",
   });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const set = (k: string, v: string) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  if (!student) {
+    return (
+      <div className="text-center py-20 text-white/40">
+        Student not found.{" "}
+        <Link href="/app/students" className="text-brand-400 hover:underline">
+          Go back
+        </Link>
+      </div>
+    );
+  }
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    const result = await updateStudentAction(id, {
+      ...form,
+      status: form.status as "active" | "inactive",
+    });
+    setSaving(false);
+
+    if (!result.success) {
+      setError(result.error ?? "Something went wrong.");
+      return;
+    }
+
+    router.push(`/app/students/${id}`);
+    router.refresh();
+  };
 
   return (
     <div className="space-y-5 animate-fade-in max-w-2xl">
@@ -44,7 +79,7 @@ export default function EditStudentPage({
         subtitle={student.name}
         back={
           <Link href={`/app/students/${id}`}>
-            <button className="p-2 hover:bg-white/8 rounded-xl transition-all duration-200 cursor-pointer">
+            <button className="p-2 hover:bg-white/8 rounded-xl transition-colors cursor-pointer">
               <ArrowLeft size={18} />
             </button>
           </Link>
@@ -108,6 +143,7 @@ export default function EditStudentPage({
             type="number"
             value={form.monthlyFee}
             onChange={(e) => set("monthlyFee", e.target.value)}
+            hint="Leave blank for 'Fee Not Set'"
           />
         )}
         <div>
@@ -140,13 +176,24 @@ export default function EditStudentPage({
         </div>
       </div>
 
+      {error && (
+        <p className="text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-3">
         <Link href={`/app/students/${id}`} className="flex-1">
           <Button variant="secondary" className="w-full">
             Cancel
           </Button>
         </Link>
-        <Button icon={<Save size={15} />} className="flex-1">
+        <Button
+          icon={<Save size={15} />}
+          className="flex-1"
+          loading={saving}
+          onClick={handleSave}
+        >
           Save Changes
         </Button>
       </div>

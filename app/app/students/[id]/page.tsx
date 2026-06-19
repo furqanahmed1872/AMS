@@ -1,18 +1,40 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import React from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { STUDENTS } from "@/lib/dummy-data";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useAcademyData } from "@/lib/academy-data/provider";
+import {
+  getStudentTestScores,
+  getStudentAttendanceByMonth,
+  getStudentFeeHistory,
+  updateStudentAction,
+  type ScoreBySubject,
+  type AttendanceByMonth,
+  type FeeHistoryRow,
+} from "@/lib/students/actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { ArrowLeft, Edit, BarChart3, TrendingUp, Calendar, DollarSign, Share2, Phone, MapPin, User, BookOpen } from "lucide-react";
-import React from "react";
-
-const role: "admin" | "teacher" = "admin";
+import {
+  ArrowLeft,
+  Edit,
+  BarChart3,
+  TrendingUp,
+  Calendar,
+  DollarSign,
+  Share2,
+  Phone,
+  MapPin,
+  User,
+  BookOpen,
+  UserMinus,
+} from "lucide-react";
 
 export default function StudentProfilePage({
   params,
@@ -20,41 +42,72 @@ export default function StudentProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = React.use(params);
-  const student = STUDENTS.find((s) => s.id === id) || STUDENTS[0];
+  const router = useRouter();
+  const { role, students } = useAcademyData();
+  const student = students.find((s) => s.id === id);
+
   const [activeModal, setActiveModal] = useState<
     "score" | "attendance" | "fee" | null
   >(null);
+  const [scores, setScores] = useState<ScoreBySubject[] | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceByMonth[] | null>(
+    null,
+  );
+  const [feeHistory, setFeeHistory] = useState<FeeHistoryRow[] | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
-  const feeHistory = [
-    { month: "June 2025", due: 4000, paid: 4000, status: "paid" as const },
-    { month: "May 2025", due: 4000, paid: 4000, status: "paid" as const },
-    { month: "April 2025", due: 4000, paid: 0, status: "unpaid" as const },
-    { month: "March 2025", due: 4000, paid: 4000, status: "paid" as const },
-  ];
+  const [showDeactivate, setShowDeactivate] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
-  const scoresBySubject = [
-    {
-      subject: "Mathematics",
-      tests: [
-        { name: "T1", obtained: 28, total: 30 },
-        { name: "T2", obtained: 27, total: 30 },
-      ],
-    },
-    {
-      subject: "Physics",
-      tests: [
-        { name: "T1", obtained: 18, total: 20 },
-        { name: "T2", obtained: 19, total: 20 },
-      ],
-    },
-    { subject: "Chemistry", tests: [{ name: "T1", obtained: 22, total: 25 }] },
-  ];
+  const openModal = async (type: "score" | "attendance" | "fee") => {
+    setActiveModal(type);
+    if (type === "score" && !scores) {
+      setModalLoading(true);
+      setScores(await getStudentTestScores(id));
+      setModalLoading(false);
+    }
+    if (type === "attendance" && !attendance) {
+      setModalLoading(true);
+      setAttendance(await getStudentAttendanceByMonth(id));
+      setModalLoading(false);
+    }
+    if (type === "fee" && !feeHistory) {
+      setModalLoading(true);
+      setFeeHistory(await getStudentFeeHistory(id));
+      setModalLoading(false);
+    }
+  };
 
-  const attendanceByMonth = [
-    { month: "June 2025", present: 12, absent: 3 },
-    { month: "May 2025", present: 22, absent: 4 },
-    { month: "April 2025", present: 18, absent: 7 },
-  ];
+  const handleDeactivate = async () => {
+    if (!student) return;
+    setIsDeactivating(true);
+    await updateStudentAction(id, {
+      name: student.name,
+      fatherName: student.fatherName,
+      classId: student.classId,
+      rollNumber: String(student.rollNumber),
+      monthlyFee: String(student.monthlyFee ?? ""),
+      admissionDate: student.admissionDate,
+      phone: student.phone,
+      address: student.address,
+      teacherRemarks: student.teacherRemarks ?? "",
+      status: "inactive",
+    });
+    setIsDeactivating(false);
+    setShowDeactivate(false);
+    router.refresh();
+  };
+
+  if (!student) {
+    return (
+      <div className="text-center py-20 text-white/40">
+        Student not found.{" "}
+        <Link href="/app/students" className="text-brand-400 hover:underline">
+          Go back
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in max-w-3xl">
@@ -63,7 +116,7 @@ export default function StudentProfilePage({
         subtitle={student.class}
         back={
           <Link href="/app/students">
-            <button className="p-2 hover:bg-white/8 rounded-xl transition-colors">
+            <button className="p-2 hover:bg-white/8 rounded-xl transition-colors cursor-pointer">
               <ArrowLeft size={18} />
             </button>
           </Link>
@@ -80,10 +133,20 @@ export default function StudentProfilePage({
               </Button>
             </Link>
             <Link href={`/app/students/${student.id}/edit`}>
-              <Button icon={<Edit size={14} />} size="sm">
+              <Button variant="secondary" icon={<Edit size={14} />} size="sm">
                 Edit
               </Button>
             </Link>
+            {student.status === "active" && (
+              <Button
+                variant="danger"
+                icon={<UserMinus size={14} />}
+                size="sm"
+                onClick={() => setShowDeactivate(true)}
+              >
+                Deactivate
+              </Button>
+            )}
           </div>
         }
       />
@@ -118,11 +181,10 @@ export default function StudentProfilePage({
 
       {/* 3 Summary Boxes */}
       <div className="grid grid-cols-3 gap-3">
-        {/* Avg Score */}
         <Card
           hover
           className="p-4 text-center cursor-pointer"
-          onClick={() => setActiveModal("score")}
+          onClick={() => openModal("score")}
         >
           <div className="flex justify-center mb-2">
             <TrendingUp size={18} className="text-brand-400" />
@@ -133,11 +195,10 @@ export default function StudentProfilePage({
           <div className="text-xs text-white/50 mt-1">Avg. Score</div>
         </Card>
 
-        {/* Attendance */}
         <Card
           hover
           className="p-4 text-center cursor-pointer"
-          onClick={() => setActiveModal("attendance")}
+          onClick={() => openModal("attendance")}
         >
           <div className="flex justify-center mb-2">
             <Calendar size={18} className="text-cyan-400" />
@@ -148,11 +209,10 @@ export default function StudentProfilePage({
           <div className="text-xs text-white/50 mt-1">Attendance</div>
         </Card>
 
-        {/* Fee Status */}
         <Card
           hover={role === "admin"}
           className="p-4 text-center"
-          onClick={() => role === "admin" && setActiveModal("fee")}
+          onClick={() => role === "admin" && openModal("fee")}
         >
           <div className="flex justify-center mb-2">
             <DollarSign
@@ -167,7 +227,13 @@ export default function StudentProfilePage({
             />
           </div>
           <div
-            className={`text-sm font-bold font-display ${student.feeStatus === "paid" ? "text-emerald-400" : student.feeStatus === "not_set" ? "text-white/40" : "text-rose-400"}`}
+            className={`text-sm font-bold font-display ${
+              student.feeStatus === "paid"
+                ? "text-emerald-400"
+                : student.feeStatus === "not_set"
+                  ? "text-white/40"
+                  : "text-rose-400"
+            }`}
           >
             {student.feeStatus === "not_set"
               ? "Not Set"
@@ -228,36 +294,46 @@ export default function StudentProfilePage({
         </div>
       </Card>
 
-      {/* Modals */}
+      {/* Score Modal */}
       <Modal
         isOpen={activeModal === "score"}
         onClose={() => setActiveModal(null)}
         title="Test Scores by Subject"
         size="lg"
       >
-        <div className="space-y-4 max-h-96 overflow-y-auto">
-          {scoresBySubject.map(({ subject, tests }) => (
-            <div key={subject} className="bg-surface-2 rounded-xl p-4">
-              <h4 className="font-semibold text-white mb-3">{subject}</h4>
-              <div className="space-y-2">
-                {tests.map((t) => (
-                  <div
-                    key={t.name}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="text-white/50">{t.name}</span>
-                    <span className="font-medium text-white">
-                      {t.obtained}/{t.total}
-                    </span>
-                    <span className="text-brand-400">
-                      {Math.round((t.obtained / t.total) * 100)}%
-                    </span>
-                  </div>
-                ))}
+        {modalLoading || !scores ? (
+          <div className="py-10 text-center text-white/30 text-sm">
+            Loading…
+          </div>
+        ) : scores.length === 0 ? (
+          <div className="py-10 text-center text-white/30 text-sm">
+            No test results yet.
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {scores.map(({ subject, tests }) => (
+              <div key={subject} className="bg-surface-2 rounded-xl p-4">
+                <h4 className="font-semibold text-white mb-3">{subject}</h4>
+                <div className="space-y-2">
+                  {tests.map((t) => (
+                    <div
+                      key={t.name}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-white/50">{t.name}</span>
+                      <span className="font-medium text-white">
+                        {t.obtained}/{t.total}
+                      </span>
+                      <span className="text-brand-400">
+                        {Math.round((t.obtained / t.total) * 100)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         <Button
           variant="secondary"
           className="w-full mt-4"
@@ -267,26 +343,37 @@ export default function StudentProfilePage({
         </Button>
       </Modal>
 
+      {/* Attendance Modal */}
       <Modal
         isOpen={activeModal === "attendance"}
         onClose={() => setActiveModal(null)}
         title="Monthly Attendance"
         size="md"
       >
-        <div className="space-y-3 max-h-80 overflow-y-auto">
-          {attendanceByMonth.map(({ month, present, absent }) => (
-            <div
-              key={month}
-              className="bg-surface-2 rounded-xl p-3 flex items-center justify-between"
-            >
-              <span className="text-sm text-white/70">{month}</span>
-              <div className="flex gap-4 text-xs">
-                <span className="text-emerald-400">{present} Present</span>
-                <span className="text-rose-400">{absent} Absent</span>
+        {modalLoading || !attendance ? (
+          <div className="py-10 text-center text-white/30 text-sm">
+            Loading…
+          </div>
+        ) : attendance.length === 0 ? (
+          <div className="py-10 text-center text-white/30 text-sm">
+            No attendance records yet.
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {attendance.map(({ month, present, absent }) => (
+              <div
+                key={month}
+                className="bg-surface-2 rounded-xl p-3 flex items-center justify-between"
+              >
+                <span className="text-sm text-white/70">{month}</span>
+                <div className="flex gap-4 text-xs">
+                  <span className="text-emerald-400">{present} Present</span>
+                  <span className="text-rose-400">{absent} Absent</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         <Button
           variant="secondary"
           className="w-full mt-4"
@@ -296,6 +383,7 @@ export default function StudentProfilePage({
         </Button>
       </Modal>
 
+      {/* Fee History Modal — admin only */}
       {role === "admin" && (
         <Modal
           isOpen={activeModal === "fee"}
@@ -303,26 +391,48 @@ export default function StudentProfilePage({
           title="Fee History"
           size="md"
         >
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {feeHistory.map(({ month, due, paid, status }) => (
-              <div
-                key={month}
-                className="bg-surface-2 rounded-xl p-3 flex items-center justify-between"
-              >
-                <span className="text-sm text-white/70">{month}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-white/40">
-                    {formatCurrency(due)}
-                  </span>
-                  <Badge variant={status}>
-                    {status === "paid" ? "Paid" : "Unpaid"}
-                  </Badge>
+          {modalLoading || !feeHistory ? (
+            <div className="py-10 text-center text-white/30 text-sm">
+              Loading…
+            </div>
+          ) : feeHistory.length === 0 ? (
+            <div className="py-10 text-center text-white/30 text-sm">
+              No fee records yet.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {feeHistory.map(({ month, due, status }) => (
+                <div
+                  key={month}
+                  className="bg-surface-2 rounded-xl p-3 flex items-center justify-between"
+                >
+                  <span className="text-sm text-white/70">{month}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-white/40">
+                      {formatCurrency(due)}
+                    </span>
+                    <Badge variant={status}>
+                      {status === "paid" ? "Paid" : "Unpaid"}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Modal>
       )}
+
+      {/* Deactivate Confirm */}
+      <ConfirmDialog
+        isOpen={showDeactivate}
+        onClose={() => setShowDeactivate(false)}
+        onConfirm={handleDeactivate}
+        loading={isDeactivating}
+        title="Deactivate Student"
+        message={`This will mark ${student.name} as inactive. They will no longer appear in attendance, fees, or active student lists. You can reactivate them from the Edit page at any time.`}
+        confirmLabel="Deactivate"
+        danger
+      />
     </div>
   );
 }

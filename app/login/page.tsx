@@ -52,8 +52,8 @@ export default function LoginPage() {
             <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center shadow-glow mb-4">
               <GraduationCap size={28} className="text-white" />
             </div>
-            <h1 className="text-xl font-bold font-display text-white">Superior Academy</h1>
-            <p className="text-white/40 text-sm mt-1">Management System</p>
+            <h1 className="text-xl font-bold font-display text-white">Academy Management System</h1>
+            <p className="text-white/40 text-sm mt-1">Sign in to your account</p>
           </div>
 
           {/* Role selector */}
