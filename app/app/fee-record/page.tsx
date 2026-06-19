@@ -6,25 +6,14 @@ import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
 import { useAcademyData } from "@/lib/academy-data/provider";
 import {
-  getFeeRecordAction,
-  type FeeRecordStudent,
+  getFeeRecordAction
 } from "@/lib/fees/fee-record-actions";
+import type { FeeRecordStudent } from "@/lib/fees/types";
+import { ACADEMIC_MONTHS } from "@/lib/fees/types";
 import { Download } from "lucide-react";
 
 // Academic year: May of startYear through March of startYear+1
-const monthLabels = [
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-  "Jan",
-  "Feb",
-  "Mar",
-];
+const monthLabels = ACADEMIC_MONTHS.map((m) => m.label);
 
 // Build academic year options: current year and two prior
 function buildYearOptions() {
@@ -87,13 +76,13 @@ export default function FeeRecordPage() {
             options={classOptions}
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="h-9 min-w-36"
+            className="min-w-36"
           />
           <Select
             options={yearOptions}
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="h-9 min-w-28"
+            className="min-w-28"
           />
         </div>
       </Card>

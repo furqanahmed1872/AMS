@@ -59,18 +59,22 @@ export async function createStudentAction(formData: {
     finalRollNumber = existing ? existing.roll_number + 1 : 1;
   }
 
-  const { error } = await supabase.from("students").insert({
-    academy_id: session.academyId,
-    class_id: classId,
-    name: name.trim(),
-    father_name: fatherName.trim() || null,
-    roll_number: finalRollNumber,
-    monthly_fee: monthlyFee ? parseFloat(monthlyFee) : null,
-    admission_date: admissionDate,
-    phone: phone.trim() || null,
-    address: address.trim() || null,
-    added_by_role: session.role,
-  });
+  const { error, data } = await supabase
+    .from("students")
+    .insert({
+      academy_id: session.academyId,
+      class_id: classId,
+      name: name.trim(),
+      father_name: fatherName.trim() || null,
+      roll_number: finalRollNumber,
+      monthly_fee: monthlyFee ? parseFloat(monthlyFee) : null,
+      admission_date: admissionDate,
+      phone: phone.trim() || null,
+      address: address.trim() || null,
+      added_by_role: session.role,
+    })
+    .select("id")
+    .single();;
 
   if (error) {
     if (error.code === "23505")
@@ -82,6 +86,31 @@ export async function createStudentAction(formData: {
   }
 
   revalidatePath("/app/students");
+
+  // If added by teacher with no fee set, notify admin
+  if (session.role === "teacher" && !monthlyFee) {
+    const { data: cls } = await supabase
+      .from("classes")
+      .select("name, section")
+      .eq("id", classId)
+      .single();
+
+    const className = cls
+      ? cls.section
+        ? `${cls.name} ${cls.section}`
+        : cls.name
+      : "Unknown Class";
+
+    await supabase.from("notifications").insert({
+      academy_id: session.academyId,
+      type: "fee_not_set",
+      student_id: data.id,
+      message: `New student '${name.trim()}' added to ${className} by Teacher — fee not set.`,
+    });
+
+    revalidatePath("/app/notifications");
+  }
+
   return { success: true };
 }
 

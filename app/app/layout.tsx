@@ -4,13 +4,15 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { getSession } from "@/lib/auth/session";
 import { getAcademyBootstrapData } from "@/lib/academy-data/get-bootstrap-data";
 import { AcademyDataProvider } from "@/lib/academy-data/provider";
+import { RealtimeProvider } from "@/components/providers/RealtimeProvider";
 
-// This stays an async Server Component on purpose: Next.js automatically
-// shows app/app/loading.tsx for the entire time this function is awaiting,
-// then swaps in the fully-rendered tree (this layout + whichever page) in
-// one go. Nothing under /app ever renders with partial data.
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await getSession();
+  console.log("Session in layout:", session);
   if (!session) redirect("/login");
 
   const data = await getAcademyBootstrapData(session.academyId);
@@ -32,7 +34,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               academyName: session.academyName,
             }}
           >
-            {children}
+            <RealtimeProvider academyId={session.academyId}>
+              {children}
+            </RealtimeProvider>
           </AcademyDataProvider>
         </div>
       </main>

@@ -207,7 +207,7 @@ export default function AttendancePage() {
                 options={classOptions}
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="h-9 min-w-36"
+                className="min-w-36"
               />
 
               {/* Mark-all shortcuts */}
@@ -355,7 +355,7 @@ export default function AttendancePage() {
                 options={classOptions}
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="h-9 min-w-36"
+                className="min-w-36"
               />
               <input
                 type="month"

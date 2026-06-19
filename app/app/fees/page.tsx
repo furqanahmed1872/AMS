@@ -112,18 +112,18 @@ export default function FeesPage() {
       {/* Controls */}
       <Card className="p-4">
         <div className="flex flex-wrap gap-3 items-center justify-between">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-rows gap-3">
             <Select
               options={classOptions}
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="h-9 min-w-36"
+              className="min-w-36"
             />
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="input-field w-44 h-9 text-sm"
+              className="input-field w-44 h-10.5 text-sm"
             />
           </div>
           <Button

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -8,29 +9,48 @@ import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { TESTS, CLASSES, SUBJECTS } from "@/lib/dummy-data";
-import { Plus, BookOpen, ArrowRight } from "lucide-react";
 import { SearchFilter } from "@/components/shared/SearchFilter";
-
-const classOptions = CLASSES.map(c => ({ value: c.id, label: c.displayName }));
-const subjectOptions = SUBJECTS.map(s => ({ value: s.id, label: s.name }));
+import { useAcademyData } from "@/lib/academy-data/provider";
+import { createTestAction } from "@/lib/tests/actions";
+import { Plus, BookOpen, ArrowRight } from "lucide-react";
 
 export default function TestsPage() {
+  const router = useRouter();
+  const { tests, classes, subjects } = useAcademyData();
+
   const [showCreate, setShowCreate] = useState(false);
   const [classFilter, setClassFilter] = useState("all");
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    classId: classes[0]?.id ?? "",
+    subjectId: subjects[0]?.id ?? "",
+    date: new Date().toISOString().split("T")[0],
+    totalMarks: "",
+  });
+  const set = (k: string, v: string) =>
+    setForm((prev) => ({ ...prev, [k]: v }));
+
+  const classOptions = classes.map((c) => ({
+    value: c.id,
+    label: c.displayName,
+  }));
+  const subjectOptions = subjects.map((s) => ({ value: s.id, label: s.name }));
 
   const allClassOptions = [
     { value: "all", label: "All Classes" },
-    ...CLASSES.map((c) => ({ value: c.id, label: c.displayName })),
+    ...classOptions,
   ];
   const allSubjectOptions = [
     { value: "all", label: "All Subjects" },
-    ...SUBJECTS.map((s) => ({ value: s.id, label: s.name })),
+    ...subjectOptions,
   ];
 
-  const filteredTests = TESTS.filter((t) => {
+  const filteredTests = tests.filter((t) => {
     const matchClass = classFilter === "all" || t.classId === classFilter;
     const matchSubject =
       subjectFilter === "all" || t.subjectId === subjectFilter;
@@ -40,14 +60,35 @@ export default function TestsPage() {
     return matchClass && matchSubject && matchSearch;
   });
 
-  const [form, setForm] = useState({ name: "", classId: "", subjectId: "", date: new Date().toISOString().split("T")[0], totalMarks: "" });
-  const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+  const handleCreate = async () => {
+    setSaving(true);
+    setFormError("");
+    const result = await createTestAction(form);
+    setSaving(false);
+
+    if (!result.success) {
+      setFormError(result.error ?? "Something went wrong.");
+      return;
+    }
+
+    setShowCreate(false);
+    setForm({
+      name: "",
+      classId: classes[0]?.id ?? "",
+      subjectId: subjects[0]?.id ?? "",
+      date: new Date().toISOString().split("T")[0],
+      totalMarks: "",
+    });
+    // PRD §8.2: after creation go directly into marks entry
+    router.push(`/app/tests/${result.id}`);
+    router.refresh();
+  };
 
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
         title="Tests"
-        subtitle={`${TESTS.length} tests created`}
+        subtitle={`${tests.length} test${tests.length !== 1 ? "s" : ""} created`}
         actions={
           <Button icon={<Plus size={15} />} onClick={() => setShowCreate(true)}>
             Create Test
@@ -84,60 +125,73 @@ export default function TestsPage() {
         {filteredTests.length} test{filteredTests.length !== 1 ? "s" : ""} found
       </div>
 
-      <div className="space-y-2">
-        {filteredTests.map((test) => (
-          <Card key={test.id} hover className="p-4 flex items-center gap-4">
-            <div className="p-2.5 bg-brand-500/10 rounded-xl text-brand-400 shrink-0">
-              <BookOpen size={18} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-white">{test.name}</span>
-                <span className="text-xs text-white/40">·</span>
-                <span className="text-xs text-white/60">{test.subject}</span>
-                <span className="text-xs text-white/40">·</span>
-                <span className="text-xs text-white/60">{test.class}</span>
+      {filteredTests.length === 0 ? (
+        <div className="glass-card p-10 text-center text-white/30 text-sm">
+          {tests.length === 0
+            ? "No tests yet. Create your first test."
+            : "No tests match your filters."}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredTests.map((test) => (
+            <Card key={test.id} hover className="p-4 flex items-center gap-4">
+              <div className="p-2.5 bg-brand-500/10 rounded-xl text-brand-400 shrink-0">
+                <BookOpen size={18} />
               </div>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-white/40">
-                  {new Date(test.date).toLocaleDateString("en-PK", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-                <span className="text-xs text-white/40">
-                  Max: {test.totalMarks} marks
-                </span>
-                <Badge
-                  variant={
-                    test.marksEntered === test.totalStudents
-                      ? "active"
-                      : test.marksEntered > 0
-                        ? "default"
-                        : "not_set"
-                  }
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-white">{test.name}</span>
+                  <span className="text-xs text-white/40">·</span>
+                  <span className="text-xs text-white/60">{test.subject}</span>
+                  <span className="text-xs text-white/40">·</span>
+                  <span className="text-xs text-white/60">{test.class}</span>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-white/40">
+                    {new Date(test.date).toLocaleDateString("en-PK", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <span className="text-xs text-white/40">
+                    Max: {test.totalMarks} marks
+                  </span>
+                  <Badge
+                    variant={
+                      test.marksEntered === test.totalStudents &&
+                      test.totalStudents > 0
+                        ? "active"
+                        : test.marksEntered > 0
+                          ? "default"
+                          : "not_set"
+                    }
+                  >
+                    {test.marksEntered}/{test.totalStudents} entered
+                  </Badge>
+                </div>
+              </div>
+              <Link href={`/app/tests/${test.id}`}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  iconRight={<ArrowRight size={13} />}
                 >
-                  {test.marksEntered}/{test.totalStudents} entered
-                </Badge>
-              </div>
-            </div>
-            <Link href={`/app/tests/${test.id}`}>
-              <Button
-                variant="secondary"
-                size="sm"
-                iconRight={<ArrowRight size={13} />}
-              >
-                Enter Marks
-              </Button>
-            </Link>
-          </Card>
-        ))}
-      </div>
+                  Enter Marks
+                </Button>
+              </Link>
+            </Card>
+          ))}
+        </div>
+      )}
 
+      {/* Create Test Modal */}
       <Modal
         isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
+        onClose={() => {
+          setShowCreate(false);
+          setFormError("");
+        }}
         title="Create Test"
         size="md"
       >
@@ -179,15 +233,21 @@ export default function TestsPage() {
               onChange={(e) => set("totalMarks", e.target.value)}
             />
           </div>
+          {formError && <p className="text-xs text-rose-400">{formError}</p>}
           <div className="flex gap-3 pt-2">
             <Button
               variant="secondary"
               className="flex-1"
-              onClick={() => setShowCreate(false)}
+              onClick={() => {
+                setShowCreate(false);
+                setFormError("");
+              }}
             >
               Cancel
             </Button>
-            <Button className="flex-1">Create & Enter Marks</Button>
+            <Button className="flex-1" loading={saving} onClick={handleCreate}>
+              Create & Enter Marks
+            </Button>
           </div>
         </div>
       </Modal>
