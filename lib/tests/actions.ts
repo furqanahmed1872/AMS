@@ -266,7 +266,9 @@ export async function getTestResultsAction(
     .eq("academy_id", session.academyId);
 
   return (results ?? []).map((r) => {
-    const student = r.students as { name: string; roll_number: number };
+    const student = (
+      Array.isArray(r.students) ? r.students[0] : r.students
+    ) as { name: string; roll_number: number };
     return {
       studentId: r.student_id,
       name: student.name,
