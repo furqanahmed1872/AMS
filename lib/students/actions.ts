@@ -74,7 +74,7 @@ export async function createStudentAction(formData: {
       added_by_role: session.role,
     })
     .select("id")
-    .single();;
+    .single();
 
   if (error) {
     if (error.code === "23505")
@@ -237,12 +237,14 @@ export async function getStudentTestScores(
 
   const grouped: Record<string, ScoreBySubject> = {};
   for (const row of data) {
-    const test = row.tests as {
+    const test = row.tests as unknown as {
       name: string;
       total_marks: number;
-      subjects: { name: string };
+      subjects: { name: string } | { name: string }[];
     };
-    const subjectName = test.subjects.name;
+    const subjectName = Array.isArray(test.subjects)
+      ? test.subjects[0].name
+      : test.subjects.name;
     if (!grouped[subjectName])
       grouped[subjectName] = { subject: subjectName, tests: [] };
     grouped[subjectName].tests.push({
