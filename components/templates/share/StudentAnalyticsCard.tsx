@@ -110,6 +110,7 @@ export function StudentAnalyticsCard({
               alignItems: "center",
               justifyContent: "center",
               fontSize: 18,
+              flexShrink: 0,
             }}
           >
             📊
@@ -142,10 +143,17 @@ export function StudentAnalyticsCard({
         }}
       >
         <div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "white" }}>
+          <div
+            style={{
+              fontSize: 17,
+              fontWeight: 800,
+              color: "white",
+              lineHeight: 1.2,
+            }}
+          >
             {studentName}
           </div>
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
             {className} · Roll #{rollNumber}
           </div>
         </div>
@@ -163,6 +171,7 @@ export function StudentAnalyticsCard({
             fontSize: 20,
             fontWeight: 900,
             color: scoreColor,
+            flexShrink: 0,
           }}
         >
           {grade}
@@ -170,6 +179,11 @@ export function StudentAnalyticsCard({
       </div>
 
       {/* ── 3 Stat Boxes ────────────────────────────────── */}
+      {/*
+        FIX: All 3 boxes use identical background logic now.
+        FIX: Added display:flex + flexDirection:column + alignItems:center + justifyContent:center
+             so value and label are both truly centered inside the box.
+      */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
         {[
           {
@@ -177,39 +191,51 @@ export function StudentAnalyticsCard({
             value: `${avgScore}%`,
             color: scoreColor,
             bg: `${scoreColor}18`,
+            border: `${scoreColor}33`,
           },
           {
             label: "Attendance",
             value: `${attendancePercent}%`,
             color: attColor,
             bg: `${attColor}18`,
+            border: `${attColor}33`,
           },
           {
             label: "Tests Taken",
             value: String(totalTests),
             color: "#818cf8",
             bg: "rgba(129,140,248,0.15)",
+            border: "rgba(129,140,248,0.3)",
           },
-        ].map(({ label, value, color, bg }) => (
+        ].map(({ label, value, color, bg, border }) => (
           <div
             key={label}
             style={{
               flex: 1,
               background: bg,
-              border: `1px solid ${color}33`,
+              border: `1px solid ${border}`,
               borderRadius: 12,
-              padding: "12px 8px",
-              textAlign: "center",
+              padding: "14px 8px",
+              // FIX: proper flex centering so value + label are centered both axes
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
             }}
           >
-            <div style={{ fontSize: 20, fontWeight: 900, color }}>{value}</div>
+            <div
+              style={{ fontSize: 22, fontWeight: 900, color, lineHeight: 1 }}
+            >
+              {value}
+            </div>
             <div
               style={{
                 fontSize: 9,
                 color: "#9ca3af",
-                marginTop: 3,
                 textTransform: "uppercase",
                 letterSpacing: 0.5,
+                lineHeight: 1,
               }}
             >
               {label}
@@ -233,20 +259,24 @@ export function StudentAnalyticsCard({
           >
             Subject Performance
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {scores.map((s, idx) => {
               const total = s.tests.reduce((a, t) => a + t.total, 0);
               const obtained = s.tests.reduce((a, t) => a + t.obtained, 0);
               const pct = total > 0 ? Math.round((obtained / total) * 100) : 0;
               const color = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
               return (
-                <div key={s.subject}>
+                // FIX: Each subject is a column: info row on top, bar strictly below
+                <div
+                  key={s.subject}
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
+                  {/* Info row */}
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      marginBottom: 4,
                     }}
                   >
                     <div
@@ -258,6 +288,7 @@ export function StudentAnalyticsCard({
                           height: 7,
                           borderRadius: "50%",
                           background: color,
+                          flexShrink: 0,
                         }}
                       />
                       <span style={{ fontSize: 11, color: "#e5e7eb" }}>
@@ -279,20 +310,23 @@ export function StudentAnalyticsCard({
                           fontWeight: 700,
                           color,
                           background: `${color}22`,
-                          padding: "1px 6px",
+                          padding: "2px 6px",
                           borderRadius: 6,
+                          lineHeight: 1.4,
                         }}
                       >
                         {pct}%
                       </span>
                     </div>
                   </div>
+                  {/* Progress bar — strictly below the info row, never overlapping */}
                   <div
                     style={{
                       height: 5,
                       background: "rgba(255,255,255,0.07)",
                       borderRadius: 9999,
                       overflow: "hidden",
+                      width: "100%",
                     }}
                   >
                     <div
@@ -326,23 +360,33 @@ export function StudentAnalyticsCard({
           >
             Monthly Attendance{months.length > 5 ? " (Last 5 months)" : ""}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {recentMonths.map((m) => {
               const total = m.present + m.absent;
               const pct = total > 0 ? Math.round((m.present / total) * 100) : 0;
               const barColor =
                 pct >= 80 ? "#4ade80" : pct >= 60 ? "#fbbf24" : "#f87171";
+              // FIX: format month label properly — show e.g. "Jun 2026" not "Jun 26"
+              const parts = m.month.split(" ");
+              const monthLabel =
+                `${parts[0].slice(0, 3)} ${parts[1] ?? ""}`.trim();
               return (
+                // FIX: all items in this row are vertically centered via alignItems:center
                 <div
                   key={m.month}
                   style={{ display: "flex", alignItems: "center", gap: 8 }}
                 >
                   <span
-                    style={{ fontSize: 10, color: "#9ca3af", minWidth: 72 }}
+                    style={{
+                      fontSize: 10,
+                      color: "#9ca3af",
+                      minWidth: 72,
+                      lineHeight: 1,
+                    }}
                   >
-                    {m.month.split(" ")[0].slice(0, 3)}{" "}
-                    {m.month.split(" ")[1]?.slice(2)}
+                    {monthLabel}
                   </span>
+                  {/* Bar sits inline, same height as text via alignItems:center on parent */}
                   <div
                     style={{
                       flex: 1,
@@ -350,6 +394,7 @@ export function StudentAnalyticsCard({
                       background: "rgba(255,255,255,0.07)",
                       borderRadius: 9999,
                       overflow: "hidden",
+                      alignSelf: "center",
                     }}
                   >
                     <div
@@ -367,6 +412,7 @@ export function StudentAnalyticsCard({
                       color: "#6b7280",
                       minWidth: 56,
                       textAlign: "right",
+                      lineHeight: 1,
                     }}
                   >
                     {m.present}P / {m.absent}A
@@ -378,6 +424,7 @@ export function StudentAnalyticsCard({
                       color: barColor,
                       minWidth: 30,
                       textAlign: "right",
+                      lineHeight: 1,
                     }}
                   >
                     {pct}%
