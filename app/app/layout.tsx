@@ -34,9 +34,8 @@ export default async function AppLayout({
               academyName: session.academyName,
             }}
           >
-            <RealtimeProvider academyId={session.academyId}>
               {children}
-            </RealtimeProvider>
+            
           </AcademyDataProvider>
         </div>
       </main>
