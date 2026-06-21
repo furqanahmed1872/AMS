@@ -32,20 +32,40 @@ interface StatCardProps {
   icon: React.ReactNode;
   accentColor?: string;
   trend?: { value: string; up: boolean };
+  className?: string;
 }
 
-export function StatCard({ label, value, subtitle, icon, accentColor = "text-brand-400", trend }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  subtitle,
+  icon,
+  accentColor = "text-brand-400",
+  trend,
+  className,
+}: StatCardProps) {
   return (
-    <Card hover className="p-5">
+    <Card hover className={cn("p-5", className)}>
       <div className="flex items-start justify-between mb-4">
-        <div className={cn("p-2.5 rounded-xl bg-white/5", accentColor)}>{icon}</div>
+        <div className={cn("p-2.5 rounded-xl bg-white/5", accentColor)}>
+          {icon}
+        </div>
         {trend && (
-          <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", trend.up ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400")}>
+          <span
+            className={cn(
+              "text-xs font-medium px-2 py-0.5 rounded-full",
+              trend.up
+                ? "bg-emerald-500/10 text-emerald-400"
+                : "bg-rose-500/10 text-rose-400",
+            )}
+          >
             {trend.up ? "↑" : "↓"} {trend.value}
           </span>
         )}
       </div>
-      <div className={cn("text-2xl font-bold font-display", accentColor)}>{value}</div>
+      <div className={cn("text-2xl font-bold font-display", accentColor)}>
+        {value}
+      </div>
       <div className="text-sm text-white/60 mt-0.5">{label}</div>
       {subtitle && <div className="text-xs text-white/40 mt-1">{subtitle}</div>}
     </Card>

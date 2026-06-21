@@ -111,19 +111,19 @@ export default function FeesPage() {
 
       {/* Controls */}
       <Card className="p-4">
-        <div className="flex flex-wrap gap-3 items-center justify-between">
-          <div className="flex flex-rows gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-center sm:justify-between">
+          <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3">
             <Select
               options={classOptions}
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="min-w-36"
+              className="w-full sm:w-auto sm:min-w-36"
             />
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="input-field w-44 h-10.5 text-sm"
+              className="input-field w-full sm:w-44 h-10.5 text-sm"
             />
           </div>
           <Button
@@ -132,6 +132,7 @@ export default function FeesPage() {
             icon={<RefreshCw size={13} />}
             loading={isGenerating}
             onClick={handleGenerate}
+            className="w-full sm:w-auto"
           >
             Generate Records
           </Button>
@@ -176,28 +177,30 @@ export default function FeesPage() {
               return (
                 <div
                   key={student.id}
-                  className="flex items-center gap-4 px-4 py-3.5"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3.5"
                 >
-                  <span className="text-xs font-bold text-white/30 w-6">
-                    #{student.rollNumber}
-                  </span>
-                  <Avatar name={student.name} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">
-                      {student.name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {student.monthlyFee && (
-                        <span className="text-xs text-white/40">
-                          {formatCurrency(student.monthlyFee)}/mo
-                        </span>
-                      )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-bold text-white/30 w-6 shrink-0">
+                      #{student.rollNumber}
+                    </span>
+                    <Avatar name={student.name} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {student.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {student.monthlyFee && (
+                          <span className="text-xs text-white/40">
+                            {formatCurrency(student.monthlyFee)}/mo
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pl-9 sm:pl-0 sm:ml-auto shrink-0">
                     {isNotSet ? (
                       <Link href={`/app/students/${student.id}/edit`}>
-                        <div className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 px-3 py-1.5 rounded-xl cursor-pointer transition-all group">
+                        <div className="flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 px-3 py-1.5 rounded-xl cursor-pointer transition-all group whitespace-nowrap">
                           <AlertTriangle
                             size={13}
                             className="text-amber-400 shrink-0"

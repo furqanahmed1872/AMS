@@ -143,7 +143,7 @@ export default function ClassesPage() {
         <div className="space-y-3">
           <Card className="p-5">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="section-title flex items-center gap-2">
                 <GraduationCap size={18} className="text-brand-400" />
                 Classes
@@ -303,7 +303,7 @@ export default function ClassesPage() {
         <div className="space-y-3">
           <Card className="p-5">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <h2 className="section-title flex items-center gap-2">
                 <BookOpen size={18} className="text-violet-400" />
                 Subjects
@@ -318,7 +318,7 @@ export default function ClassesPage() {
                   setSubjectError("");
                   setNewSubject("");
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                   showSubjectForm
                     ? "bg-white/10 text-white/60 hover:bg-white/15"
                     : "bg-violet-600 hover:bg-violet-500 text-white"

@@ -108,7 +108,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           label="Active Students"
           value={dashboardStats.activeStudents}
@@ -141,6 +141,7 @@ export default function DashboardPage() {
               value={formatCurrency(dashboardStats.dueThisMonth)}
               icon={<TrendingDown size={18} />}
               accentColor="text-rose-400"
+              className="col-span-2 sm:col-span-1"
             />
           </>
         )}
