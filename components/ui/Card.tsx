@@ -45,7 +45,7 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div className={`glass-card p-4 ${className}`}>
-      <div className="flex items-start justify-between gap-2">
+      <div className="grid items-start justify-between gap-2">
         <div className={`p-2.5 rounded-xl bg-white/5 shrink-0 ${accentColor}`}>
           {icon}
         </div>
