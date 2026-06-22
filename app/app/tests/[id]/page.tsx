@@ -21,7 +21,6 @@ export default function MarksEntryPage({
 
   const test = tests.find((t) => t.id === id);
 
-  // Students for this test's class, active only, sorted by roll number
   const classStudents = students
     .filter((s) => s.classId === test?.classId && s.status === "active")
     .sort((a, b) => a.rollNumber - b.rollNumber);
@@ -33,7 +32,6 @@ export default function MarksEntryPage({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  // Load existing marks for pre-fill (PRD §8.3.3)
   useEffect(() => {
     if (!test) {
       setLoading(false);
@@ -90,7 +88,7 @@ export default function MarksEntryPage({
   }
 
   return (
-    <div className="space-y-5 animate-fade-in max-w-2xl">
+    <div className="space-y-5 animate-fade-in w-full max-w-2xl">
       <PageHeader
         title={test.name}
         subtitle={`${test.subject} · ${test.class} · ${test.totalMarks} marks`}
@@ -102,8 +100,8 @@ export default function MarksEntryPage({
           </Link>
         }
         actions={
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-white/40 font-medium">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-xs text-white/40 font-medium whitespace-nowrap">
               {entered}/{classStudents.length} entered
             </span>
             <Button
@@ -133,7 +131,7 @@ export default function MarksEntryPage({
       ) : (
         <Card className="overflow-hidden">
           <div className="divide-y divide-white/5">
-            {classStudents.map((student, i) => {
+            {classStudents.map((student) => {
               const isAbsent = absent[student.id] ?? false;
               const mark = marks[student.id] ?? "";
               const pct =
@@ -143,50 +141,57 @@ export default function MarksEntryPage({
               return (
                 <div
                   key={student.id}
-                  className="flex items-center gap-4 px-4 py-3"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-3 w-full min-w-0"
                 >
-                  <span className="text-xs font-bold text-white/30 w-6">
+                  {/* Roll number */}
+                  <span className="text-xs font-bold text-white/30 w-7 shrink-0">
                     #{student.rollNumber}
                   </span>
-                  <span className="flex-1 text-sm font-medium text-white">
+
+                  {/* Student name — shrinks and truncates */}
+                  <span className="flex-1 min-w-0 text-sm font-medium text-white truncate">
                     {student.name}
                   </span>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        disabled={isAbsent}
-                        value={mark}
-                        min={0}
-                        max={test.totalMarks}
-                        onChange={(e) =>
-                          setMarks((prev) => ({
-                            ...prev,
-                            [student.id]: e.target.value,
-                          }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === "Tab") {
-                            e.preventDefault();
-                            // Focus the next student's input
-                            const inputs =
-                              document.querySelectorAll<HTMLInputElement>(
-                                "input[type=number]",
-                              );
-                            const idx = Array.from(inputs).findIndex(
-                              (el) => el === e.currentTarget,
+
+                  {/* Controls — fixed, never shrink */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* Marks input */}
+                    <input
+                      type="number"
+                      disabled={isAbsent}
+                      value={mark}
+                      min={0}
+                      max={test.totalMarks}
+                      onChange={(e) =>
+                        setMarks((prev) => ({
+                          ...prev,
+                          [student.id]: e.target.value,
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === "Tab") {
+                          e.preventDefault();
+                          const inputs =
+                            document.querySelectorAll<HTMLInputElement>(
+                              "input[type=number]",
                             );
-                            inputs[idx + 1]?.focus();
-                          }
-                        }}
-                        placeholder="—"
-                        className="w-16 h-9 bg-surface-2 border border-white/10 rounded-lg px-2 text-center text-sm focus:border-brand-500 focus:outline-none disabled:opacity-30 transition-colors"
-                      />
-                      <span className="text-xs text-white/30">
-                        /{test.totalMarks}
-                      </span>
-                    </div>
-                    <div className="w-14 text-right">
+                          const idx = Array.from(inputs).findIndex(
+                            (el) => el === e.currentTarget,
+                          );
+                          inputs[idx + 1]?.focus();
+                        }
+                      }}
+                      placeholder="—"
+                      className="w-14 sm:w-16 h-9 bg-surface-2 border border-white/10 rounded-lg px-2 text-center text-sm focus:border-brand-500 focus:outline-none disabled:opacity-30 transition-colors"
+                    />
+
+                    {/* Total marks */}
+                    <span className="text-xs text-white/30 shrink-0">
+                      /{test.totalMarks}
+                    </span>
+
+                    {/* Percentage — fixed width so checkbox never gets pushed off */}
+                    <div className="w-12 text-right shrink-0">
                       {isAbsent ? (
                         <span className="text-xs font-medium text-rose-400">
                           Absent
@@ -201,7 +206,9 @@ export default function MarksEntryPage({
                         <span className="text-xs text-white/20">—</span>
                       )}
                     </div>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
+
+                    {/* Absent checkbox */}
+                    <label className="flex items-center gap-1 cursor-pointer shrink-0">
                       <input
                         type="checkbox"
                         checked={isAbsent}
@@ -211,12 +218,17 @@ export default function MarksEntryPage({
                             [student.id]: e.target.checked,
                           }));
                           if (e.target.checked) {
-                            setMarks((prev) => ({ ...prev, [student.id]: "" }));
+                            setMarks((prev) => ({
+                              ...prev,
+                              [student.id]: "",
+                            }));
                           }
                         }}
                         className="w-4 h-4 accent-rose-500"
                       />
-                      <span className="text-xs text-white/40">Abs</span>
+                      <span className="text-xs text-white/40 hidden sm:inline">
+                        Abs
+                      </span>
                     </label>
                   </div>
                 </div>
