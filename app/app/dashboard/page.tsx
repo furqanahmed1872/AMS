@@ -17,6 +17,7 @@ import {
   Bell,
   CheckCircle2,
   AlertCircle,
+  CalendarCheck,
 } from "lucide-react";
 import { useAcademyData } from "@/lib/academy-data/provider";
 import { formatCurrency, getCurrentMonthYear } from "@/lib/utils";
@@ -127,6 +128,12 @@ export default function DashboardPage() {
           value={dashboardStats.totalTests}
           icon={<BookOpen size={18} />}
           accentColor="text-cyan-400"
+        />
+        <StatCard
+          label="Attendance Taken Today"
+          value={`${dashboardStats.classesAttendanceTakenToday}/${dashboardStats.totalClasses}`}
+          icon={<CalendarCheck size={18} />}
+          accentColor="text-amber-400"
         />
         {role === "admin" && (
           <>

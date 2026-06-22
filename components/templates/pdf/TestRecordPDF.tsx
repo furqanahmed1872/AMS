@@ -4,6 +4,7 @@ interface Test {
   id: string;
   name: string;
   totalMarks: number;
+  date: string;
 }
 interface TestRecordRow {
   studentId: string;
@@ -127,6 +128,16 @@ export function TestRecordPDF({
                   </span>
                 </th>
               ))}
+              <th
+                style={{
+                  ...headerStyle,
+                  background: "#eef2ff",
+                  color: "#4f46e5",
+                  minWidth: 64,
+                }}
+              >
+                Total %
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -176,6 +187,53 @@ export function TestRecordPDF({
                     </td>
                   );
                 })}
+                {(() => {
+                  const attempted = row.cells.filter((c) => c !== null);
+                  if (attempted.length === 0) {
+                    return (
+                      <td
+                        style={{
+                          ...cellStyle,
+                          background: "#f9fafb",
+                          color: "#d1d5db",
+                        }}
+                      >
+                        —
+                      </td>
+                    );
+                  }
+                  const totalObtained = row.cells.reduce<number>(
+                    (sum, cell, j) => {
+                      if (cell === null || cell === "absent") return sum;
+                      return sum + cell;
+                    },
+                    0,
+                  );
+                  const totalPossible = row.cells.reduce<number>(
+                    (sum, cell, j) => {
+                      if (cell === null) return sum;
+                      return sum + tests[j].totalMarks;
+                    },
+                    0,
+                  );
+                  const pct =
+                    totalPossible > 0
+                      ? Math.round((totalObtained / totalPossible) * 100)
+                      : 0;
+                  return (
+                    <td
+                      style={{
+                        ...cellStyle,
+                        background: "#eef2ff",
+                        color: pct >= 33 ? "#4f46e5" : "#dc2626",
+                        fontWeight: 700,
+                        fontSize: 12,
+                      }}
+                    >
+                      {pct}%
+                    </td>
+                  );
+                })()}
               </tr>
             ))}
           </tbody>

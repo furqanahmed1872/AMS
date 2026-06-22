@@ -212,26 +212,7 @@ export default function FeeRecordPage() {
                     </td>
                   </tr>
 
-                  {/* Grand total row */}
-                  <tr className="border-t-2 border-emerald-500/30 bg-emerald-500/5">
-                    <td className="table-cell font-bold text-emerald-400 sticky left-0 bg-emerald-500/5">
-                      Grand
-                    </td>
-                    <td className="table-cell font-bold text-emerald-400 sticky left-10 bg-emerald-500/5">
-                      Total
-                    </td>
-                    {monthTotals.map((t, j) => (
-                      <td
-                        key={j}
-                        className="px-2 py-3 text-center text-xs font-bold text-emerald-400"
-                      >
-                        {t > 0 ? t.toLocaleString() : "—"}
-                      </td>
-                    ))}
-                    <td className="px-2 py-3 text-center text-sm font-bold text-emerald-300 bg-emerald-500/10 rounded">
-                      Rs. {grandTotal.toLocaleString()}
-                    </td>
-                  </tr>
+               
                 </tbody>
               </table>
             </div>

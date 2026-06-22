@@ -185,9 +185,14 @@ export default function TestRecordPage() {
                 {tests.map((t) => (
                   <th key={t.id} className="table-header text-center min-w-20">
                     {t.name}
+            
+                    
                     <br />
-                    <span className="text-white/30 text-xs font-normal">
-                      /{t.totalMarks}
+                    <span className="text-white/25 text-xs font-normal">
+                      {new Date(t.date).toLocaleDateString("en-PK", {
+                        day: "2-digit",
+                        month: "short",
+                      })}
                     </span>
                   </th>
                 ))}

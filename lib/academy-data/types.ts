@@ -65,6 +65,7 @@ export interface DashboardStats {
   totalTests: number;
   collectedThisMonth: number;
   dueThisMonth: number;
+  classesAttendanceTakenToday: number;
 }
 
 // Today's attendance tally, academy-wide — backs the "Today's Attendance"
