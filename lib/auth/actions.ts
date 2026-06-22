@@ -22,18 +22,22 @@ export interface LoginResult {
  *  4. On success, create the signed session cookie and log the login
  *     (session_logs — PRD §11.1) for the admin's visible login history.
  */
-export async function loginAction(role: Role, password: string): Promise<LoginResult> {
+// AFTER
+export async function loginAction(
+  role: Role,
+  password: string,
+  academyId?: string
+): Promise<LoginResult> {
   if (!password) {
     return { success: false, error: "Password is required." };
   }
 
   const supabase = createServiceClient();
 
-  const { data: academy, error: academyError } = await supabase
-    .from("academies")
-    .select("id, name")
-    .limit(1)
-    .single();
+  const query = supabase.from("academies").select("id, name");
+  const { data: academy, error: academyError } = academyId
+    ? await query.eq("id", academyId).eq("status", "active").single()
+    : await query.limit(1).single();
 
   if (academyError || !academy) {
     return { success: false, error: "Academy could not be found." };
