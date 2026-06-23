@@ -16,11 +16,13 @@ import {
   ArrowLeft,
   Share2,
   TrendingUp,
+  CalendarDays,
   TrendingDown,
   Minus,
 } from "lucide-react";
 import { StudentAnalyticsCard } from "@/components/templates/share/StudentAnalyticsCard";
 import { shareElementAsImage } from "@/lib/export/utils";
+import { Modal } from "@/components/ui/Modal";
 
 // SVG line chart helpers — identical to the original implementation
 const W = 400;
@@ -77,6 +79,11 @@ export default function AnalyticsPage({
   >(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
+  // ── ADD after existing useState lines ──
+  const [showCombinedModal, setShowCombinedModal] = useState(false);
+  const [combinedTab, setCombinedTab] = useState<"scores" | "attendance">(
+    "scores",
+  );
 
   useEffect(() => {
     let active = true;
@@ -188,47 +195,291 @@ export default function AnalyticsPage({
           </Button>
         }
       />
-
       {/* Overview cards */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          {
-            label: "Avg. Score",
-            value: `${student.avgScore}%`,
-            color: "text-brand-400",
-            trend: overallTrend,
-          },
-          {
-            label: "Attendance",
-            value: `${student.attendancePercent}%`,
-            color: "text-cyan-400",
-            trend: attendanceTrend,
-          },
-          {
-            label: "Tests Taken",
-            value: String(totalTests),
-            color: "text-violet-400",
-            trend: "up",
-          },
-        ].map(({ label, value, color, trend }) => (
-          <Card key={label} className="p-4 text-center">
-            <div className={`text-xl font-bold font-display ${color}`}>
-              {value}
+      // ── REPLACE the entire "Overview cards" div ──
+      {/* Combined Stats Card */}
+      <button
+        onClick={() => setShowCombinedModal(true)}
+        className="w-full text-left glass-card p-5 rounded-2xl border border-white/8 hover:border-brand-500/40 transition-all duration-200 cursor-pointer group"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+            Performance Overview
+          </span>
+          <span className="text-xs text-brand-400/60 group-hover:text-brand-400 transition-colors">
+            View Details →
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-6">
+          {/* Avg Score */}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/15 flex items-center justify-center shrink-0">
+              <TrendingUp size={18} className="text-brand-400" />
             </div>
-            <div className="text-xs text-white/40 mt-1">{label}</div>
-            <div className="flex justify-center mt-2">
-              {trend === "up" ? (
-                <TrendingUp size={12} className="text-emerald-400" />
-              ) : trend === "down" ? (
-                <TrendingDown size={12} className="text-rose-400" />
+            <div>
+              <p
+                className="text-2xl font-bold"
+                style={{
+                  color:
+                    student.avgScore >= 75
+                      ? "#4ade80"
+                      : student.avgScore >= 50
+                        ? "#818cf8"
+                        : student.avgScore >= 33
+                          ? "#fbbf24"
+                          : "#f87171",
+                }}
+              >
+                {student.avgScore}%
+              </p>
+              <p className="text-xs text-white/50 mt-0.5">Avg. Score</p>
+            </div>
+          </div>
+          {/* Attendance */}
+          <div className="flex items-center gap-4 border-l border-white/8 pl-6">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center shrink-0">
+              <CalendarDays size={18} className="text-cyan-400" />
+            </div>
+            <div>
+              <p
+                className="text-2xl font-bold"
+                style={{
+                  color:
+                    student.attendancePercent >= 80
+                      ? "#4ade80"
+                      : student.attendancePercent >= 60
+                        ? "#fbbf24"
+                        : "#f87171",
+                }}
+              >
+                {student.attendancePercent}%
+              </p>
+              <p className="text-xs text-white/50 mt-0.5">Attendance</p>
+            </div>
+          </div>
+        </div>
+        {/* Summary footer */}
+        <div className="mt-4 pt-4 border-t border-white/6 flex items-center justify-between text-xs text-white/35">
+          <span>
+            {totalTests} test{totalTests !== 1 ? "s" : ""} recorded
+          </span>
+          <span>
+            {attendanceData.reduce((s, m) => s + m.present + m.absent, 0)}{" "}
+            school days tracked
+          </span>
+        </div>
+      </button>
+      {/* Combined Modal */}
+      {showCombinedModal && (
+        <Modal
+          isOpen={showCombinedModal}
+          onClose={() => setShowCombinedModal(false)}
+          title="Performance Details"
+          size="lg"
+        >
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-surface-2 rounded-xl mb-5">
+            {(["scores", "attendance"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setCombinedTab(tab)}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  combinedTab === tab
+                    ? "bg-brand-500 text-white shadow-sm"
+                    : "text-white/50 hover:text-white/80"
+                }`}
+              >
+                {tab === "scores" ? "Test Scores" : "Attendance"}
+              </button>
+            ))}
+          </div>
+
+          {combinedTab === "scores" && (
+            <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-1">
+              {subjectData.length === 0 ? (
+                <p className="text-center text-white/30 text-sm py-10">
+                  No test scores yet.
+                </p>
               ) : (
-                <Minus size={12} className="text-white/30" />
+                subjectData.map(
+                  ({ subject, avg, tests: percents, labels, color }) => (
+                    <div key={subject}>
+                      {/* Subject header */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color }}
+                        >
+                          {subject}
+                        </span>
+                        <span className="text-xs text-white/40">
+                          Avg:{" "}
+                          <span className="text-white/70 font-medium">
+                            {avg}%
+                          </span>
+                        </span>
+                      </div>
+                      {/* Per-test table */}
+                      <div className="rounded-xl overflow-hidden border border-white/8">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-surface-2 text-white/40 text-xs">
+                              <th className="px-3 py-2 text-left font-medium">
+                                Test
+                              </th>
+                              <th className="px-3 py-2 text-right font-medium">
+                                Obtained
+                              </th>
+                              <th className="px-3 py-2 text-right font-medium">
+                                Total
+                              </th>
+                              <th className="px-3 py-2 text-right font-medium">
+                                %
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {(scores ?? [])
+                              .find((s) => s.subject === subject)
+                              ?.tests.map((t, i) => {
+                                const pct = Math.round(
+                                  (t.obtained / t.total) * 100,
+                                );
+                                return (
+                                  <tr
+                                    key={i}
+                                    className="hover:bg-white/3 transition-colors"
+                                  >
+                                    <td className="px-3 py-2.5 text-white/80">
+                                      {t.name}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right text-white/70">
+                                      {t.obtained}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right text-white/40">
+                                      {t.total}
+                                    </td>
+                                    <td
+                                      className="px-3 py-2.5 text-right font-semibold"
+                                      style={{
+                                        color:
+                                          pct >= 75
+                                            ? "#4ade80"
+                                            : pct >= 50
+                                              ? "#818cf8"
+                                              : pct >= 33
+                                                ? "#fbbf24"
+                                                : "#f87171",
+                                      }}
+                                    >
+                                      {pct}%
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ),
+                )
               )}
             </div>
-          </Card>
-        ))}
-      </div>
+          )}
 
+          {combinedTab === "attendance" && (
+            <div className="max-h-[60vh] overflow-y-auto pr-1">
+              {attendanceData.length === 0 ? (
+                <p className="text-center text-white/30 text-sm py-10">
+                  No attendance records yet.
+                </p>
+              ) : (
+                <div className="rounded-xl overflow-hidden border border-white/8">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-surface-2 text-white/40 text-xs">
+                        <th className="px-3 py-2 text-left font-medium">
+                          Month
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium">
+                          Present
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium">
+                          Absent
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium">
+                          Total Days
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {(attendanceMonths ?? []).map((m, i) => {
+                        const total = m.present + m.absent;
+                        const pct =
+                          total > 0 ? Math.round((m.present / total) * 100) : 0;
+                        return (
+                          <tr
+                            key={i}
+                            className="hover:bg-white/3 transition-colors"
+                          >
+                            <td className="px-3 py-2.5 text-white/80">
+                              {m.month}
+                            </td>
+                            <td className="px-3 py-2.5 text-right text-emerald-400 font-medium">
+                              {m.present}
+                            </td>
+                            <td className="px-3 py-2.5 text-right text-rose-400 font-medium">
+                              {m.absent}
+                            </td>
+                            <td className="px-3 py-2.5 text-right text-white/40">
+                              {total}
+                            </td>
+                            <td
+                              className="px-3 py-2.5 text-right font-semibold"
+                              style={{
+                                color:
+                                  pct >= 80
+                                    ? "#4ade80"
+                                    : pct >= 60
+                                      ? "#fbbf24"
+                                      : "#f87171",
+                              }}
+                            >
+                              {pct}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    {/* Totals footer */}
+                    <tfoot>
+                      <tr className="bg-surface-2 text-xs text-white/50 border-t border-white/10">
+                        <td className="px-3 py-2 font-medium">Total</td>
+                        <td className="px-3 py-2 text-right text-emerald-400 font-semibold">
+                          {attendanceData.reduce((s, m) => s + m.present, 0)}
+                        </td>
+                        <td className="px-3 py-2 text-right text-rose-400 font-semibold">
+                          {attendanceData.reduce((s, m) => s + m.absent, 0)}
+                        </td>
+                        <td className="px-3 py-2 text-right text-white/40 font-semibold">
+                          {attendanceData.reduce(
+                            (s, m) => s + m.present + m.absent,
+                            0,
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right font-bold text-white/70">
+                          {student.attendancePercent}%
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal>
+      )}
       {/* Subject line charts */}
       {subjectData.length === 0 ? (
         <Card className="p-10 text-center text-white/30 text-sm">
@@ -375,7 +626,6 @@ export default function AnalyticsPage({
           </div>
         </Card>
       )}
-
       {/* Subject average comparison bar */}
       {subjectData.length > 0 && (
         <Card className="p-5">
@@ -402,7 +652,6 @@ export default function AnalyticsPage({
           </div>
         </Card>
       )}
-
       {/* Monthly attendance stacked bar */}
       {attendanceData.length === 0 ? (
         <Card className="p-10 text-center text-white/30 text-sm">
@@ -444,7 +693,6 @@ export default function AnalyticsPage({
           </div>
         </Card>
       )}
-
       {!loading && student && (
         <StudentAnalyticsCard
           academyName={academyName}
