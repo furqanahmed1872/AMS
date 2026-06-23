@@ -79,11 +79,9 @@ export default function StudentProfilePage({
   const { role, students, academyName } = useAcademyData();
   const student = students.find((s) => s.id === id);
 
-  // Modal state ─ "perf" covers Score + Attendance together
   const [activeModal, setActiveModal] = useState<"perf" | "fee" | null>(null);
   const [perfTab, setPerfTab] = useState<"scores" | "attendance">("scores");
 
-  // Data state
   const [scores, setScores] = useState<ScoreBySubject[] | null>(null);
   const [attendance, setAttendance] = useState<AttendanceByMonth[] | null>(
     null,
@@ -95,20 +93,18 @@ export default function StudentProfilePage({
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [sharing, setSharing] = useState(false);
 
-  // ── Data loaders ────────────────────────────────────────────────────────────
+  // ── Data loaders ─────────────────────────────────────────────────────────────
 
   const openPerfModal = async (tab: "scores" | "attendance") => {
     setPerfTab(tab);
     setActiveModal("perf");
-
-    const needsScores = tab === "scores" && !scores;
-    const needsAtt = tab === "attendance" && !attendance;
+    const needsScores = !scores;
+    const needsAtt = !attendance;
     if (!needsScores && !needsAtt) return;
-
     setModalLoading(true);
     const [s, a] = await Promise.all([
-      needsScores ? getStudentTestScores(id) : Promise.resolve(scores),
-      needsAtt ? getStudentAttendanceByMonth(id) : Promise.resolve(attendance),
+      needsScores ? getStudentTestScores(id) : Promise.resolve(scores!),
+      needsAtt ? getStudentAttendanceByMonth(id) : Promise.resolve(attendance!),
     ]);
     if (needsScores) setScores(s);
     if (needsAtt) setAttendance(a);
@@ -124,27 +120,14 @@ export default function StudentProfilePage({
     }
   };
 
-  // Load both datasets when switching tabs inside the open modal
-  const switchTab = async (tab: "scores" | "attendance") => {
+  const switchTab = (tab: "scores" | "attendance") => {
     setPerfTab(tab);
-    const needsScores = tab === "scores" && !scores;
-    const needsAtt = tab === "attendance" && !attendance;
-    if (!needsScores && !needsAtt) return;
-    setModalLoading(true);
-    const [s, a] = await Promise.all([
-      needsScores ? getStudentTestScores(id) : Promise.resolve(scores),
-      needsAtt ? getStudentAttendanceByMonth(id) : Promise.resolve(attendance),
-    ]);
-    if (needsScores) setScores(s);
-    if (needsAtt) setAttendance(a);
-    setModalLoading(false);
   };
 
-  // ── Share handler ────────────────────────────────────────────────────────────
+  // ── Share ─────────────────────────────────────────────────────────────────────
 
   const handleShare = async () => {
     if (!student) return;
-    // Make sure both datasets are loaded before capturing the card
     setSharing(true);
     const [s, a] = await Promise.all([
       scores ?? getStudentTestScores(id),
@@ -152,7 +135,6 @@ export default function StudentProfilePage({
     ]);
     setScores(s);
     setAttendance(a);
-    // Give React one tick to render the hidden card with fresh data
     await new Promise((r) => setTimeout(r, 80));
     await shareElementAsImage(
       "student-combined-share-card",
@@ -161,7 +143,7 @@ export default function StudentProfilePage({
     setSharing(false);
   };
 
-  // ── Deactivate ───────────────────────────────────────────────────────────────
+  // ── Deactivate ────────────────────────────────────────────────────────────────
 
   const handleDeactivate = async () => {
     if (!student) return;
@@ -183,8 +165,6 @@ export default function StudentProfilePage({
     router.refresh();
   };
 
-  // ── Guard ────────────────────────────────────────────────────────────────────
-
   if (!student) {
     return (
       <div className="text-center py-20 text-white/40">
@@ -196,21 +176,20 @@ export default function StudentProfilePage({
     );
   }
 
-  // ── Derived values ───────────────────────────────────────────────────────────
+  // ── Derived data for tables ───────────────────────────────────────────────────
 
-  const sColor = scoreColor(student.avgScore);
-  const aColor = attendanceColor(student.attendancePercent);
+  // Scores: collect all unique test names in order
+  const allTestNames = Array.from(
+    new Set((scores ?? []).flatMap((s) => s.tests.map((t) => t.name))),
+  );
 
-  const SUBJECT_COLORS = [
-    "#818cf8",
-    "#06b6d4",
-    "#10b981",
-    "#f59e0b",
-    "#f472b6",
-    "#a78bfa",
-  ];
+  // Attendance: months are already ordered from the server
+  const allMonths = (attendance ?? []).map((m) => m.month);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────────
+
+  const sColorClass = scoreColor(student.avgScore);
+  const aColorClass = attendanceColor(student.attendancePercent);
 
   return (
     <div className="space-y-4 animate-fade-in pb-10">
@@ -251,7 +230,7 @@ export default function StudentProfilePage({
         }
       />
 
-      {/* Avatar + name card */}
+      {/* Avatar card */}
       <Card className="p-5">
         <div className="flex items-center gap-4">
           <Avatar name={student.name} size="lg" />
@@ -277,34 +256,31 @@ export default function StudentProfilePage({
         </div>
       </Card>
 
-      {/* ── 2-column summary: Combined Perf + Fee Status ── */}
+      {/* ── Summary cards ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
-        {/* ── Combined Score + Attendance card ─────────── */}
+        {/* Combined Performance card */}
         <Card
           hover
-          className="p-4 cursor-pointer col-span-1"
+          className="p-4 cursor-pointer"
           onClick={() => openPerfModal("scores")}
         >
-          {/* Card header */}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-white/40 font-medium">
+            <span className="text-xs text-white/40 font-medium uppercase tracking-wider">
               Performance
             </span>
-            <span className="text-[10px] text-brand-400/60 hover:text-brand-400 transition-colors">
+            <span className="text-[10px] text-brand-400/60">
               View Details →
             </span>
           </div>
-
-          {/* Two metrics side by side */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Avg Score */}
+            {/* Score */}
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center shrink-0">
                 <TrendingUp size={15} className="text-brand-400" />
               </div>
               <div>
                 <div
-                  className={`text-lg font-bold font-display leading-none ${sColor}`}
+                  className={`text-xl font-bold font-display leading-none ${sColorClass}`}
                 >
                   {student.avgScore}%
                 </div>
@@ -313,15 +289,14 @@ export default function StudentProfilePage({
                 </div>
               </div>
             </div>
-
-            {/* Divider */}
+            {/* Attendance */}
             <div className="flex items-center gap-2.5 border-l border-white/8 pl-3">
               <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
                 <CalendarDays size={15} className="text-cyan-400" />
               </div>
               <div>
                 <div
-                  className={`text-lg font-bold font-display leading-none ${aColor}`}
+                  className={`text-xl font-bold font-display leading-none ${aColorClass}`}
                 >
                   {student.attendancePercent}%
                 </div>
@@ -331,8 +306,7 @@ export default function StudentProfilePage({
               </div>
             </div>
           </div>
-
-          {/* Share button */}
+          {/* Share inline */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -344,17 +318,16 @@ export default function StudentProfilePage({
               <span className="text-brand-400">Sharing…</span>
             ) : (
               <>
-                <Share2 size={11} />
-                Share via WhatsApp
+                <Share2 size={11} /> Share via WhatsApp
               </>
             )}
           </button>
         </Card>
 
-        {/* ── Fee Status card ──────────────────────────── */}
+        {/* Fee Status card */}
         <Card
           hover={role === "admin" && student.feeStatus !== "not_set"}
-          className={`p-4 col-span-1 ${role === "admin" && student.feeStatus !== "not_set" ? "cursor-pointer" : ""}`}
+          className={`p-4 ${role === "admin" && student.feeStatus !== "not_set" ? "cursor-pointer" : ""}`}
           onClick={() =>
             role === "admin" &&
             student.feeStatus !== "not_set" &&
@@ -453,7 +426,7 @@ export default function StudentProfilePage({
         </div>
       </Card>
 
-      {/* ══ PERFORMANCE MODAL (Score + Attendance tabbed) ══════════════════════ */}
+      {/* ══ PERFORMANCE MODAL ══════════════════════════════════════════════════ */}
       <Modal
         isOpen={activeModal === "perf"}
         onClose={() => setActiveModal(null)}
@@ -477,305 +450,277 @@ export default function StudentProfilePage({
           ))}
         </div>
 
-        {/* Loading state */}
         {modalLoading && (
           <div className="py-12 text-center text-white/30 text-sm">
             Loading…
           </div>
         )}
 
-        {/* ── Scores Tab ─────────────────────────────────── */}
+        {/* ── SCORES TAB ─────────────────────────────────────────────────────── */}
+        {/* Layout: rows = subjects, columns = test names */}
         {!modalLoading && perfTab === "scores" && (
-          <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-0.5">
+          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
             {!scores || scores.length === 0 ? (
               <div className="py-12 text-center text-white/30 text-sm">
                 No test results yet.
               </div>
             ) : (
-              <>
-                {/* Subject summary table */}
-                <div>
-                  <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-2">
-                    Subject Summary
-                  </p>
-                  <div className="rounded-xl overflow-hidden border border-white/8">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-surface-2">
-                          <th className="px-3 py-2.5 text-left text-xs font-semibold text-white/40 uppercase tracking-wide">
-                            Subject
-                          </th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-14">
-                            Tests
-                          </th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-20">
-                            Obtained
-                          </th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-16">
-                            Total
-                          </th>
-                          <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-14">
-                            Avg %
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {scores.map((s, idx) => {
-                          const ob = s.tests.reduce(
-                            (a, t) => a + t.obtained,
-                            0,
-                          );
-                          const tot = s.tests.reduce((a, t) => a + t.total, 0);
-                          const pct =
-                            tot > 0 ? Math.round((ob / tot) * 100) : 0;
-                          const col =
-                            SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
-                          return (
-                            <tr
-                              key={s.subject}
-                              className="hover:bg-white/3 transition-colors"
-                            >
-                              <td className="px-3 py-2.5">
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-2 h-2 rounded-full shrink-0"
-                                    style={{ background: col }}
-                                  />
-                                  <span className="text-white/80">
-                                    {s.subject}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2.5 text-right text-white/40">
-                                {s.tests.length}
-                              </td>
-                              <td className="px-3 py-2.5 text-right font-semibold text-white/80">
-                                {ob}
-                              </td>
-                              <td className="px-3 py-2.5 text-right text-white/40">
-                                {tot}
-                              </td>
+              <table className="w-full text-sm border-collapse">
+                <thead className="sticky top-0 z-10">
+                  <tr>
+                    {/* First column: Subject label */}
+                    <th className="bg-surface-2 px-3 py-2.5 text-left text-xs font-semibold text-white/40 uppercase tracking-wide whitespace-nowrap border-b border-white/8 border-r border-white/8 min-w-[110px]">
+                      Subject
+                    </th>
+                    {/* One column per test name */}
+                    {allTestNames.map((name) => (
+                      <th
+                        key={name}
+                        className="bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold text-white/40 uppercase tracking-wide whitespace-nowrap border-b border-white/8 min-w-[72px]"
+                      >
+                        {name}
+                      </th>
+                    ))}
+                    {/* Avg column */}
+                    <th className="bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold text-white/40 uppercase tracking-wide whitespace-nowrap border-b border-white/8 border-l border-white/8 min-w-[64px]">
+                      Avg %
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {scores.map((s) => {
+                    const ob = s.tests.reduce((a, t) => a + t.obtained, 0);
+                    const tot = s.tests.reduce((a, t) => a + t.total, 0);
+                    const avg = tot > 0 ? Math.round((ob / tot) * 100) : 0;
+                    // Build a lookup for this subject's test results
+                    const testMap = new Map(s.tests.map((t) => [t.name, t]));
+                    return (
+                      <tr
+                        key={s.subject}
+                        className="hover:bg-white/3 transition-colors"
+                      >
+                        {/* Subject name */}
+                        <td className="px-3 py-2.5 text-white/80 font-medium whitespace-nowrap border-r border-white/8">
+                          {s.subject}
+                        </td>
+                        {/* Marks per test */}
+                        {allTestNames.map((name) => {
+                          const t = testMap.get(name);
+                          if (!t) {
+                            return (
                               <td
-                                className="px-3 py-2.5 text-right font-bold"
+                                key={name}
+                                className="px-3 py-2.5 text-center text-white/20"
+                              >
+                                —
+                              </td>
+                            );
+                          }
+                          const pct =
+                            t.total > 0
+                              ? Math.round((t.obtained / t.total) * 100)
+                              : 0;
+                          return (
+                            <td key={name} className="px-3 py-2.5 text-center">
+                              <span className="font-semibold text-white/80">
+                                {t.obtained}
+                              </span>
+                              <span className="text-white/30 text-[10px]">
+                                /{t.total}
+                              </span>
+                              <br />
+                              <span
+                                className="text-[10px] font-bold"
                                 style={{ color: scoreHex(pct) }}
                               >
                                 {pct}%
-                              </td>
-                            </tr>
+                              </span>
+                            </td>
                           );
                         })}
-                      </tbody>
-                      {/* Overall footer */}
-                      <tfoot>
-                        <tr className="border-t border-white/10 bg-surface-2">
-                          <td className="px-3 py-2.5 text-xs font-semibold text-white/50">
-                            Overall
-                          </td>
-                          <td className="px-3 py-2.5 text-right text-xs text-white/40">
-                            {scores.reduce((s, sub) => s + sub.tests.length, 0)}
-                          </td>
-                          <td className="px-3 py-2.5 text-right text-xs font-bold text-white/70">
-                            {scores.reduce(
-                              (s, sub) =>
-                                s +
-                                sub.tests.reduce((a, t) => a + t.obtained, 0),
-                              0,
-                            )}
-                          </td>
-                          <td className="px-3 py-2.5 text-right text-xs text-white/40">
-                            {scores.reduce(
-                              (s, sub) =>
-                                s + sub.tests.reduce((a, t) => a + t.total, 0),
-                              0,
-                            )}
-                          </td>
-                          <td
-                            className="px-3 py-2.5 text-right text-xs font-bold"
-                            style={{ color: scoreHex(student.avgScore) }}
+                        {/* Subject avg */}
+                        <td className="px-3 py-2.5 text-center border-l border-white/8">
+                          <span
+                            className="text-sm font-bold"
+                            style={{ color: scoreHex(avg) }}
                           >
-                            {student.avgScore}%
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Per-subject test breakdown */}
-                {scores.map((s, idx) => {
-                  const col = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
-                  return (
-                    <div key={s.subject}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ background: col }}
-                        />
-                        <p
-                          className="text-sm font-semibold"
-                          style={{ color: col }}
-                        >
-                          {s.subject}
-                        </p>
-                        <span className="text-xs text-white/30">
-                          · {s.tests.length} test
-                          {s.tests.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="rounded-xl overflow-hidden border border-white/8">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-surface-2">
-                              <th className="px-3 py-2 text-left text-xs font-semibold text-white/40">
-                                Test
-                              </th>
-                              <th className="px-3 py-2 text-right text-xs font-semibold text-white/40 w-20">
-                                Obtained
-                              </th>
-                              <th className="px-3 py-2 text-right text-xs font-semibold text-white/40 w-16">
-                                Total
-                              </th>
-                              <th className="px-3 py-2 text-right text-xs font-semibold text-white/40 w-14">
-                                %
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                            {s.tests.map((t) => {
-                              const pct =
-                                t.total > 0
-                                  ? Math.round((t.obtained / t.total) * 100)
-                                  : 0;
-                              return (
-                                <tr
-                                  key={t.name}
-                                  className="hover:bg-white/3 transition-colors"
-                                >
-                                  <td className="px-3 py-2.5 text-white/70">
-                                    {t.name}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-right font-semibold text-white/80">
-                                    {t.obtained}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-right text-white/40">
-                                    {t.total}
-                                  </td>
-                                  <td
-                                    className="px-3 py-2.5 text-right font-bold"
-                                    style={{ color: scoreHex(pct) }}
-                                  >
-                                    {pct}%
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                })}
-              </>
+                            {avg}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {/* Overall footer */}
+                <tfoot>
+                  <tr className="border-t-2 border-white/10 bg-surface-2">
+                    <td className="px-3 py-2.5 text-xs font-semibold text-white/50 border-r border-white/8">
+                      Overall
+                    </td>
+                    {allTestNames.map((name) => {
+                      // Sum across all subjects for this test name
+                      let ob = 0,
+                        tot = 0;
+                      for (const s of scores) {
+                        const t = s.tests.find((t) => t.name === name);
+                        if (t) {
+                          ob += t.obtained;
+                          tot += t.total;
+                        }
+                      }
+                      const pct = tot > 0 ? Math.round((ob / tot) * 100) : null;
+                      return (
+                        <td key={name} className="px-3 py-2.5 text-center">
+                          {pct !== null ? (
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: scoreHex(pct) }}
+                            >
+                              {pct}%
+                            </span>
+                          ) : (
+                            <span className="text-white/20 text-xs">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2.5 text-center border-l border-white/8">
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: scoreHex(student.avgScore) }}
+                      >
+                        {student.avgScore}%
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             )}
           </div>
         )}
 
-        {/* ── Attendance Tab ──────────────────────────────── */}
+        {/* ── ATTENDANCE TAB ──────────────────────────────────────────────────── */}
+        {/* Layout: rows = Present / Absent / %, columns = months */}
         {!modalLoading && perfTab === "attendance" && (
-          <div className="max-h-[60vh] overflow-y-auto pr-0.5">
+          <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
             {!attendance || attendance.length === 0 ? (
               <div className="py-12 text-center text-white/30 text-sm">
                 No attendance records yet.
               </div>
             ) : (
-              <div className="rounded-xl overflow-hidden border border-white/8">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-surface-2">
-                      <th className="px-3 py-2.5 text-left text-xs font-semibold text-white/40 uppercase tracking-wide">
-                        Month
+              <table className="w-full text-sm border-collapse">
+                <thead className="sticky top-0 z-10">
+                  <tr>
+                    {/* Row label column */}
+                    <th className="bg-surface-2 px-3 py-2.5 text-left text-xs font-semibold text-white/40 uppercase tracking-wide border-b border-white/8 border-r border-white/8 min-w-[90px] whitespace-nowrap">
+                      &nbsp;
+                    </th>
+                    {/* One column per month */}
+                    {allMonths.map((m) => (
+                      <th
+                        key={m}
+                        className="bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold text-white/40 uppercase tracking-wide border-b border-white/8 min-w-[80px] whitespace-nowrap"
+                      >
+                        {/* Shorten to "Jan 2025" style if long */}
+                        {m.replace(/^(\w{3})\w+\s/, "$1 ")}
                       </th>
-                      <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-20">
-                        Present
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-16">
-                        Absent
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-20">
-                        Total Days
-                      </th>
-                      <th className="px-3 py-2.5 text-right text-xs font-semibold text-white/40 uppercase tracking-wide w-14">
-                        %
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {attendance.map((m, i) => {
+                    ))}
+                    {/* Total column */}
+                    <th className="bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold text-white/40 uppercase tracking-wide border-b border-white/8 border-l border-white/8 min-w-[64px] whitespace-nowrap">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Present row */}
+                  <tr className="border-b border-white/5 hover:bg-white/2">
+                    <td className="px-3 py-3 text-xs font-semibold text-emerald-400 border-r border-white/8 whitespace-nowrap">
+                      Present
+                    </td>
+                    {attendance.map((m) => (
+                      <td
+                        key={m.month}
+                        className="px-3 py-3 text-center font-semibold text-emerald-400"
+                      >
+                        {m.present}
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 text-center font-bold text-emerald-400 border-l border-white/8">
+                      {attendance.reduce((s, m) => s + m.present, 0)}
+                    </td>
+                  </tr>
+                  {/* Absent row */}
+                  <tr className="border-b border-white/5 hover:bg-white/2">
+                    <td className="px-3 py-3 text-xs font-semibold text-rose-400 border-r border-white/8 whitespace-nowrap">
+                      Absent
+                    </td>
+                    {attendance.map((m) => (
+                      <td
+                        key={m.month}
+                        className="px-3 py-3 text-center font-semibold text-rose-400"
+                      >
+                        {m.absent}
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 text-center font-bold text-rose-400 border-l border-white/8">
+                      {attendance.reduce((s, m) => s + m.absent, 0)}
+                    </td>
+                  </tr>
+                  {/* Total Days row */}
+                  <tr className="border-b border-white/5 hover:bg-white/2">
+                    <td className="px-3 py-3 text-xs font-semibold text-white/40 border-r border-white/8 whitespace-nowrap">
+                      Total Days
+                    </td>
+                    {attendance.map((m) => (
+                      <td
+                        key={m.month}
+                        className="px-3 py-3 text-center text-white/50"
+                      >
+                        {m.present + m.absent}
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 text-center font-bold text-white/50 border-l border-white/8">
+                      {attendance.reduce((s, m) => s + m.present + m.absent, 0)}
+                    </td>
+                  </tr>
+                  {/* % row */}
+                  <tr className="hover:bg-white/2">
+                    <td className="px-3 py-3 text-xs font-semibold text-white/40 border-r border-white/8 whitespace-nowrap">
+                      %
+                    </td>
+                    {attendance.map((m) => {
                       const total = m.present + m.absent;
                       const pct =
                         total > 0 ? Math.round((m.present / total) * 100) : 0;
                       return (
-                        <tr
-                          key={i}
-                          className="hover:bg-white/3 transition-colors"
-                        >
-                          <td className="px-3 py-2.5 text-white/80">
-                            {m.month}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-semibold text-emerald-400">
-                            {m.present}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-semibold text-rose-400">
-                            {m.absent}
-                          </td>
-                          <td className="px-3 py-2.5 text-right text-white/40">
-                            {total}
-                          </td>
-                          <td
-                            className="px-3 py-2.5 text-right font-bold"
+                        <td key={m.month} className="px-3 py-3 text-center">
+                          <span
+                            className="text-sm font-bold"
                             style={{ color: attendanceHex(pct) }}
                           >
                             {pct}%
-                          </td>
-                        </tr>
+                          </span>
+                        </td>
                       );
                     })}
-                  </tbody>
-                  {/* Totals footer */}
-                  <tfoot>
-                    <tr className="border-t border-white/10 bg-surface-2">
-                      <td className="px-3 py-2.5 text-xs font-semibold text-white/50">
-                        Total
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-xs font-bold text-emerald-400">
-                        {attendance.reduce((s, m) => s + m.present, 0)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-xs font-bold text-rose-400">
-                        {attendance.reduce((s, m) => s + m.absent, 0)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-xs text-white/40">
-                        {attendance.reduce(
-                          (s, m) => s + m.present + m.absent,
-                          0,
-                        )}
-                      </td>
-                      <td
-                        className="px-3 py-2.5 text-right text-xs font-bold"
+                    <td className="px-3 py-3 text-center border-l border-white/8">
+                      <span
+                        className="text-sm font-bold"
                         style={{
                           color: attendanceHex(student.attendancePercent),
                         }}
                       >
                         {student.attendancePercent}%
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             )}
           </div>
         )}
 
-        {/* Share button inside modal */}
+        {/* Share button */}
         <div className="mt-5 pt-4 border-t border-white/8">
           <Button
             variant="secondary"
@@ -857,7 +802,7 @@ export default function StudentProfilePage({
         danger
       />
 
-      {/* ══ HIDDEN SHARE CARD (off-screen, captured by html2canvas) ══════════ */}
+      {/* ══ HIDDEN SHARE CARD ════════════════════════════════════════════════ */}
       <StudentCombinedCard
         academyName={academyName}
         studentName={student.name}

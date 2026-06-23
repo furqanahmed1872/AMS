@@ -1,10 +1,7 @@
 // components/templates/share/StudentCombinedCard.tsx
-//
-// Single off-screen card captured by html2canvas and shared via WhatsApp.
-// Replaces the old StudentScoreCard + StudentAttendanceCard pair.
-// No fill/progress bars — all data shown in clean inline tables.
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Off-screen card captured by html2canvas and shared via WhatsApp.
+// Scores table:     rows = subjects,     columns = test names
+// Attendance table: rows = Present/Absent/%, columns = months
 
 export interface ScoreBySubject {
   subject: string;
@@ -12,7 +9,7 @@ export interface ScoreBySubject {
 }
 
 export interface AttendanceByMonth {
-  month: string; // e.g. "June 2026"
+  month: string;
   present: number;
   absent: number;
 }
@@ -28,25 +25,16 @@ export interface StudentCombinedCardProps {
   months: AttendanceByMonth[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Colour helpers ────────────────────────────────────────────────────────────
 
-const SUBJECT_COLORS = [
-  "#818cf8",
-  "#06b6d4",
-  "#10b981",
-  "#f59e0b",
-  "#f472b6",
-  "#a78bfa",
-];
-
-function scoreColor(pct: number): string {
-  if (pct >= 80) return "#4ade80";
-  if (pct >= 60) return "#818cf8";
+function scoreHex(pct: number): string {
+  if (pct >= 75) return "#4ade80";
+  if (pct >= 50) return "#818cf8";
   if (pct >= 33) return "#fbbf24";
   return "#f87171";
 }
 
-function attendanceColor(pct: number): string {
+function attHex(pct: number): string {
   if (pct >= 80) return "#4ade80";
   if (pct >= 60) return "#fbbf24";
   return "#f87171";
@@ -60,17 +48,17 @@ function grade(pct: number): string {
   return "F";
 }
 
-// ─── Shared inline-style constants ────────────────────────────────────────────
+// ─── Inline-style constants ────────────────────────────────────────────────────
 
-const CARD_BASE: React.CSSProperties = {
+const CARD: React.CSSProperties = {
   position: "fixed",
   top: -9999,
   left: -9999,
-  width: 560,
-  background: "linear-gradient(145deg, #0f0f1a 0%, #151528 55%, #0f1a2a 100%)",
+  width: 700,
+  background: "linear-gradient(145deg,#0f0f1a 0%,#151528 55%,#0f1a2a 100%)",
   borderRadius: 20,
   padding: 28,
-  fontFamily: "Inter, system-ui, sans-serif",
+  fontFamily: "Inter,system-ui,sans-serif",
   color: "white",
   boxSizing: "border-box",
 };
@@ -79,40 +67,63 @@ const SECTION_LABEL: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 700,
   color: "#6b7280",
-  textTransform: "uppercase",
+  textTransform: "uppercase" as const,
   letterSpacing: "0.08em",
   marginBottom: 8,
 };
 
-const TABLE_WRAPPER: React.CSSProperties = {
-  borderRadius: 10,
-  overflow: "hidden",
-  border: "1px solid rgba(255,255,255,0.08)",
+const TABLE: React.CSSProperties = {
   width: "100%",
+  borderCollapse: "collapse" as const,
+  fontSize: 11,
 };
 
-const TH: React.CSSProperties = {
+const TH_BASE: React.CSSProperties = {
   padding: "7px 10px",
   fontSize: 10,
   fontWeight: 600,
   color: "#6b7280",
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
   background: "rgba(255,255,255,0.05)",
-  textAlign: "left",
-  whiteSpace: "nowrap",
+  whiteSpace: "nowrap" as const,
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
 };
 
-const TH_RIGHT: React.CSSProperties = { ...TH, textAlign: "right" };
+const TH_LEFT: React.CSSProperties = { ...TH_BASE, textAlign: "left" };
+const TH_CENTER: React.CSSProperties = { ...TH_BASE, textAlign: "center" };
 
-const TD: React.CSSProperties = {
+const TD_BASE: React.CSSProperties = {
   padding: "7px 10px",
-  fontSize: 11,
-  color: "#d1d5db",
   borderTop: "1px solid rgba(255,255,255,0.05)",
 };
 
-const TD_RIGHT: React.CSSProperties = { ...TD, textAlign: "right" };
+const TD_LABEL: React.CSSProperties = {
+  ...TD_BASE,
+  textAlign: "left",
+  color: "#d1d5db",
+  fontWeight: 600,
+  whiteSpace: "nowrap" as const,
+  borderRight: "1px solid rgba(255,255,255,0.07)",
+  background: "rgba(255,255,255,0.02)",
+};
+
+const TD_CENTER: React.CSSProperties = { ...TD_BASE, textAlign: "center" };
+
+const TD_TOTAL: React.CSSProperties = {
+  ...TD_CENTER,
+  borderLeft: "1px solid rgba(255,255,255,0.07)",
+  background: "rgba(255,255,255,0.02)",
+};
+
+const TH_LABEL: React.CSSProperties = {
+  ...TH_LEFT,
+  borderRight: "1px solid rgba(255,255,255,0.07)",
+};
+const TH_TOTAL: React.CSSProperties = {
+  ...TH_CENTER,
+  borderLeft: "1px solid rgba(255,255,255,0.07)",
+};
 
 const DIVIDER: React.CSSProperties = {
   height: 1,
@@ -120,7 +131,13 @@ const DIVIDER: React.CSSProperties = {
   margin: "20px 0",
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const TABLE_WRAP: React.CSSProperties = {
+  borderRadius: 10,
+  overflow: "hidden",
+  border: "1px solid rgba(255,255,255,0.08)",
+};
+
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 export function StudentCombinedCard({
   academyName,
@@ -132,25 +149,26 @@ export function StudentCombinedCard({
   scores,
   months,
 }: StudentCombinedCardProps) {
-  const sColor = scoreColor(avgScore);
-  const aColor = attendanceColor(attendancePercent);
+  const sHex = scoreHex(avgScore);
+  const aHex = attHex(attendancePercent);
   const gradeLabel = grade(avgScore);
 
-  const totalObtained = scores.reduce(
-    (sum, s) => sum + s.tests.reduce((a, t) => a + t.obtained, 0),
-    0,
+  // ── Scores: collect all unique test names (column headers) ──────────────────
+  const allTestNames = Array.from(
+    new Set(scores.flatMap((s) => s.tests.map((t) => t.name))),
   );
-  const totalMarks = scores.reduce(
-    (sum, s) => sum + s.tests.reduce((a, t) => a + t.total, 0),
-    0,
-  );
+
+  // ── Attendance: month labels (column headers) ───────────────────────────────
+  // Shorten "January 2025" → "Jan 25"
+  const shortMonth = (m: string) =>
+    m.replace(/^(\w{3})\w*\s(\d{2})\d{2}$/, "$1 '$2") || m.slice(0, 6);
 
   const totalPresent = months.reduce((s, m) => s + m.present, 0);
   const totalAbsent = months.reduce((s, m) => s + m.absent, 0);
   const totalDays = totalPresent + totalAbsent;
 
   return (
-    <div id="student-combined-share-card" style={CARD_BASE}>
+    <div id="student-combined-share-card" style={CARD}>
       {/* ── Header ──────────────────────────────────────── */}
       <div
         style={{
@@ -163,15 +181,15 @@ export function StudentCombinedCard({
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
+              width: 36,
+              height: 36,
+              borderRadius: 9,
               flexShrink: 0,
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              background: "linear-gradient(135deg,#6366f1,#4f46e5)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 18,
+              fontSize: 16,
             }}
           >
             🎓
@@ -190,55 +208,42 @@ export function StudentCombinedCard({
         </div>
       </div>
 
-      {/* ── Student info + summary stats ────────────────── */}
+      {/* ── Student summary bar ─────────────────────────── */}
       <div
         style={{
           background: "rgba(255,255,255,0.04)",
-          borderRadius: 14,
+          borderRadius: 12,
           border: "1px solid rgba(255,255,255,0.08)",
-          padding: "14px 16px",
+          padding: "12px 16px",
           marginBottom: 20,
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
+          gap: 16,
         }}
       >
-        {/* Name + class */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 17,
-              fontWeight: 800,
-              color: "white",
-              lineHeight: 1.2,
-            }}
-          >
+          <div style={{ fontSize: 16, fontWeight: 800, color: "white" }}>
             {studentName}
           </div>
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
             {className} · Roll #{rollNumber}
           </div>
         </div>
-
-        {/* Avg Score pill */}
+        {/* Score pill */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            background: `${sColor}18`,
-            border: `1px solid ${sColor}44`,
-            borderRadius: 12,
-            padding: "10px 16px",
-            gap: 3,
+            background: `${sHex}18`,
+            border: `1px solid ${sHex}44`,
+            borderRadius: 10,
+            padding: "8px 14px",
+            textAlign: "center",
           }}
         >
           <div
             style={{
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 900,
-              color: sColor,
+              color: sHex,
               lineHeight: 1,
             }}
           >
@@ -248,6 +253,7 @@ export function StudentCombinedCard({
             style={{
               fontSize: 9,
               color: "#9ca3af",
+              marginTop: 2,
               textTransform: "uppercase",
               letterSpacing: "0.05em",
             }}
@@ -255,45 +261,40 @@ export function StudentCombinedCard({
             Avg Score
           </div>
         </div>
-
-        {/* Grade circle */}
+        {/* Grade */}
         <div
           style={{
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             borderRadius: "50%",
             flexShrink: 0,
-            background: `${sColor}22`,
-            border: `2px solid ${sColor}`,
+            background: `${sHex}22`,
+            border: `2px solid ${sHex}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: 900,
-            color: sColor,
+            color: sHex,
           }}
         >
           {gradeLabel}
         </div>
-
         {/* Attendance pill */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            background: `${aColor}18`,
-            border: `1px solid ${aColor}44`,
-            borderRadius: 12,
-            padding: "10px 16px",
-            gap: 3,
+            background: `${aHex}18`,
+            border: `1px solid ${aHex}44`,
+            borderRadius: 10,
+            padding: "8px 14px",
+            textAlign: "center",
           }}
         >
           <div
             style={{
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 900,
-              color: aColor,
+              color: aHex,
               lineHeight: 1,
             }}
           >
@@ -303,6 +304,7 @@ export function StudentCombinedCard({
             style={{
               fontSize: 9,
               color: "#9ca3af",
+              marginTop: 2,
               textTransform: "uppercase",
               letterSpacing: "0.05em",
             }}
@@ -312,368 +314,252 @@ export function StudentCombinedCard({
         </div>
       </div>
 
-      {/* ══ SECTION 1 — TEST SCORES ══════════════════════ */}
-      {scores.length > 0 && (
+      {/* ══ TEST SCORES ═════════════════════════════════════════════════════
+          Rows = subjects
+          Columns = test names  |  last col = Avg %
+      ═══════════════════════════════════════════════════════════════════ */}
+      {scores.length > 0 && allTestNames.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={SECTION_LABEL}>📝 Test Scores</div>
-
-          {/* Subject totals table */}
-          <div style={{ ...TABLE_WRAPPER, marginBottom: 12 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={TABLE_WRAP}>
+            <table style={TABLE}>
               <thead>
                 <tr>
-                  <th style={TH}>Subject</th>
-                  <th style={{ ...TH_RIGHT, width: 40 }}>Tests</th>
-                  <th style={{ ...TH_RIGHT, width: 70 }}>Obtained</th>
-                  <th style={{ ...TH_RIGHT, width: 50 }}>Total</th>
-                  <th style={{ ...TH_RIGHT, width: 44 }}>Avg %</th>
+                  <th style={{ ...TH_LABEL, minWidth: 90 }}>Subject</th>
+                  {allTestNames.map((name) => (
+                    <th key={name} style={{ ...TH_CENTER, minWidth: 64 }}>
+                      {name}
+                    </th>
+                  ))}
+                  <th style={{ ...TH_TOTAL, minWidth: 56 }}>Avg %</th>
                 </tr>
               </thead>
               <tbody>
-                {scores.map((s, idx) => {
+                {scores.map((s) => {
+                  const testMap = new Map(s.tests.map((t) => [t.name, t]));
                   const ob = s.tests.reduce((a, t) => a + t.obtained, 0);
                   const tot = s.tests.reduce((a, t) => a + t.total, 0);
-                  const pct = tot > 0 ? Math.round((ob / tot) * 100) : 0;
-                  const col = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
+                  const avg = tot > 0 ? Math.round((ob / tot) * 100) : 0;
                   return (
                     <tr key={s.subject}>
-                      <td style={TD}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 7,
-                              height: 7,
-                              borderRadius: "50%",
-                              background: col,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span style={{ color: "#e5e7eb" }}>{s.subject}</span>
-                        </div>
-                      </td>
-                      <td style={{ ...TD_RIGHT, color: "#9ca3af" }}>
-                        {s.tests.length}
-                      </td>
-                      <td
-                        style={{
-                          ...TD_RIGHT,
-                          color: "#e5e7eb",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {ob}
-                      </td>
-                      <td style={{ ...TD_RIGHT, color: "#6b7280" }}>{tot}</td>
-                      <td
-                        style={{
-                          ...TD_RIGHT,
-                          fontWeight: 700,
-                          color: scoreColor(pct),
-                        }}
-                      >
-                        {pct}%
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {/* Totals footer */}
-              <tfoot>
-                <tr>
-                  <td
-                    style={{
-                      ...TD,
-                      color: "#9ca3af",
-                      fontWeight: 600,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    Overall
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      color: "#9ca3af",
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {scores.reduce((s, sub) => s + sub.tests.length, 0)}
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      color: "#e5e7eb",
-                      fontWeight: 700,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {totalObtained}
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      color: "#6b7280",
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {totalMarks}
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      fontWeight: 800,
-                      color: sColor,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {avgScore}%
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* Per-subject individual test rows */}
-          {scores.map((s, idx) => {
-            const col = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
-            return (
-              <div key={s.subject} style={{ marginBottom: 10 }}>
-                {/* Subject header row */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "5px 10px",
-                    background: `${col}12`,
-                    borderRadius: "8px 8px 0 0",
-                    borderBottom: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: col,
-                    }}
-                  />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: col }}>
-                    {s.subject}
-                  </span>
-                </div>
-                {/* Tests table */}
-                <div
-                  style={{
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderTop: "none",
-                    borderRadius: "0 0 8px 8px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <th
-                          style={{
-                            ...TH,
-                            background: "rgba(255,255,255,0.03)",
-                          }}
-                        >
-                          Test
-                        </th>
-                        <th
-                          style={{
-                            ...TH_RIGHT,
-                            background: "rgba(255,255,255,0.03)",
-                            width: 70,
-                          }}
-                        >
-                          Obtained
-                        </th>
-                        <th
-                          style={{
-                            ...TH_RIGHT,
-                            background: "rgba(255,255,255,0.03)",
-                            width: 50,
-                          }}
-                        >
-                          Total
-                        </th>
-                        <th
-                          style={{
-                            ...TH_RIGHT,
-                            background: "rgba(255,255,255,0.03)",
-                            width: 44,
-                          }}
-                        >
-                          %
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {s.tests.map((t) => {
+                      <td style={{ ...TD_LABEL }}>{s.subject}</td>
+                      {allTestNames.map((name) => {
+                        const t = testMap.get(name);
+                        if (!t)
+                          return (
+                            <td
+                              key={name}
+                              style={{ ...TD_CENTER, color: "#374151" }}
+                            >
+                              —
+                            </td>
+                          );
                         const pct =
                           t.total > 0
                             ? Math.round((t.obtained / t.total) * 100)
                             : 0;
                         return (
-                          <tr key={t.name}>
-                            <td style={{ ...TD, color: "#d1d5db" }}>
-                              {t.name}
-                            </td>
-                            <td
-                              style={{
-                                ...TD_RIGHT,
-                                fontWeight: 600,
-                                color: "#e5e7eb",
-                              }}
-                            >
+                          <td key={name} style={TD_CENTER}>
+                            <span style={{ fontWeight: 600, color: "#e5e7eb" }}>
                               {t.obtained}
-                            </td>
-                            <td style={{ ...TD_RIGHT, color: "#6b7280" }}>
-                              {t.total}
-                            </td>
-                            <td
+                            </span>
+                            <span style={{ color: "#6b7280", fontSize: 9 }}>
+                              /{t.total}
+                            </span>
+                            <br />
+                            <span
                               style={{
-                                ...TD_RIGHT,
+                                fontSize: 10,
                                 fontWeight: 700,
-                                color: scoreColor(pct),
+                                color: scoreHex(pct),
                               }}
                             >
                               {pct}%
-                            </td>
-                          </tr>
+                            </span>
+                          </td>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Divider */}
-      {scores.length > 0 && months.length > 0 && <div style={DIVIDER} />}
-
-      {/* ══ SECTION 2 — ATTENDANCE ═══════════════════════ */}
-      {months.length > 0 && (
-        <div>
-          <div style={SECTION_LABEL}>📋 Monthly Attendance</div>
-
-          <div style={TABLE_WRAPPER}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={TH}>Month</th>
-                  <th style={{ ...TH_RIGHT, width: 60 }}>Present</th>
-                  <th style={{ ...TH_RIGHT, width: 56 }}>Absent</th>
-                  <th style={{ ...TH_RIGHT, width: 60 }}>Total Days</th>
-                  <th style={{ ...TH_RIGHT, width: 44 }}>%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {months.map((m, i) => {
-                  const total = m.present + m.absent;
-                  const pct =
-                    total > 0 ? Math.round((m.present / total) * 100) : 0;
-                  return (
-                    <tr key={i}>
-                      <td style={{ ...TD, color: "#e5e7eb" }}>{m.month}</td>
-                      <td
-                        style={{
-                          ...TD_RIGHT,
-                          color: "#4ade80",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {m.present}
-                      </td>
-                      <td
-                        style={{
-                          ...TD_RIGHT,
-                          color: "#f87171",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {m.absent}
-                      </td>
-                      <td style={{ ...TD_RIGHT, color: "#9ca3af" }}>{total}</td>
-                      <td
-                        style={{
-                          ...TD_RIGHT,
-                          fontWeight: 700,
-                          color: attendanceColor(pct),
-                        }}
-                      >
-                        {pct}%
+                      <td style={TD_TOTAL}>
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            color: scoreHex(avg),
+                            fontSize: 12,
+                          }}
+                        >
+                          {avg}%
+                        </span>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-              {/* Totals footer */}
+              {/* Overall footer */}
               <tfoot>
-                <tr>
-                  <td
-                    style={{
-                      ...TD,
-                      color: "#9ca3af",
-                      fontWeight: 600,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    Total
+                <tr
+                  style={{
+                    borderTop: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.03)",
+                  }}
+                >
+                  <td style={{ ...TD_LABEL, color: "#9ca3af", fontSize: 10 }}>
+                    Overall
                   </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      color: "#4ade80",
-                      fontWeight: 700,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {totalPresent}
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      color: "#f87171",
-                      fontWeight: 700,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {totalAbsent}
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      color: "#9ca3af",
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {totalDays}
-                  </td>
-                  <td
-                    style={{
-                      ...TD_RIGHT,
-                      fontWeight: 800,
-                      color: aColor,
-                      borderTop: "1px solid rgba(255,255,255,0.12)",
-                    }}
-                  >
-                    {attendancePercent}%
+                  {allTestNames.map((name) => {
+                    let ob = 0,
+                      tot = 0;
+                    for (const s of scores) {
+                      const t = s.tests.find((t) => t.name === name);
+                      if (t) {
+                        ob += t.obtained;
+                        tot += t.total;
+                      }
+                    }
+                    const pct = tot > 0 ? Math.round((ob / tot) * 100) : null;
+                    return (
+                      <td key={name} style={TD_CENTER}>
+                        {pct !== null ? (
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              color: scoreHex(pct),
+                              fontSize: 10,
+                            }}
+                          >
+                            {pct}%
+                          </span>
+                        ) : (
+                          <span style={{ color: "#374151" }}>—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td style={TD_TOTAL}>
+                    <span
+                      style={{ fontWeight: 900, color: sHex, fontSize: 13 }}
+                    >
+                      {avgScore}%
+                    </span>
                   </td>
                 </tr>
               </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {scores.length > 0 && months.length > 0 && <div style={DIVIDER} />}
+
+      {/* ══ ATTENDANCE ══════════════════════════════════════════════════════
+          Rows = Present / Absent / Total Days / %
+          Columns = months  |  last col = Total
+      ═══════════════════════════════════════════════════════════════════ */}
+      {months.length > 0 && (
+        <div>
+          <div style={SECTION_LABEL}>📋 Attendance</div>
+          <div style={TABLE_WRAP}>
+            <table style={TABLE}>
+              <thead>
+                <tr>
+                  <th style={{ ...TH_LABEL, minWidth: 80 }}>&nbsp;</th>
+                  {months.map((m) => (
+                    <th key={m.month} style={{ ...TH_CENTER, minWidth: 52 }}>
+                      {shortMonth(m.month)}
+                    </th>
+                  ))}
+                  <th style={{ ...TH_TOTAL, minWidth: 52 }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Present row */}
+                <tr>
+                  <td style={{ ...TD_LABEL, color: "#4ade80" }}>Present</td>
+                  {months.map((m) => (
+                    <td
+                      key={m.month}
+                      style={{
+                        ...TD_CENTER,
+                        color: "#4ade80",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {m.present}
+                    </td>
+                  ))}
+                  <td
+                    style={{ ...TD_TOTAL, color: "#4ade80", fontWeight: 700 }}
+                  >
+                    {totalPresent}
+                  </td>
+                </tr>
+                {/* Absent row */}
+                <tr>
+                  <td style={{ ...TD_LABEL, color: "#f87171" }}>Absent</td>
+                  {months.map((m) => (
+                    <td
+                      key={m.month}
+                      style={{
+                        ...TD_CENTER,
+                        color: "#f87171",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {m.absent}
+                    </td>
+                  ))}
+                  <td
+                    style={{ ...TD_TOTAL, color: "#f87171", fontWeight: 700 }}
+                  >
+                    {totalAbsent}
+                  </td>
+                </tr>
+                {/* Total Days row */}
+                <tr>
+                  <td style={{ ...TD_LABEL, color: "#9ca3af" }}>Days</td>
+                  {months.map((m) => (
+                    <td
+                      key={m.month}
+                      style={{ ...TD_CENTER, color: "#9ca3af" }}
+                    >
+                      {m.present + m.absent}
+                    </td>
+                  ))}
+                  <td
+                    style={{ ...TD_TOTAL, color: "#9ca3af", fontWeight: 700 }}
+                  >
+                    {totalDays}
+                  </td>
+                </tr>
+                {/* % row */}
+                <tr>
+                  <td style={{ ...TD_LABEL, color: "#d1d5db" }}>%</td>
+                  {months.map((m) => {
+                    const total = m.present + m.absent;
+                    const pct =
+                      total > 0 ? Math.round((m.present / total) * 100) : 0;
+                    return (
+                      <td key={m.month} style={TD_CENTER}>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color: attHex(pct),
+                            fontSize: 12,
+                          }}
+                        >
+                          {pct}%
+                        </span>
+                      </td>
+                    );
+                  })}
+                  <td style={TD_TOTAL}>
+                    <span
+                      style={{ fontWeight: 900, color: aHex, fontSize: 13 }}
+                    >
+                      {attendancePercent}%
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -683,17 +569,16 @@ export function StudentCombinedCard({
       <div
         style={{
           marginTop: 20,
-          paddingTop: 14,
+          paddingTop: 12,
           borderTop: "1px solid rgba(255,255,255,0.07)",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
         }}
       >
-        <span style={{ fontSize: 10, color: "#4b5563" }}>
+        <span style={{ fontSize: 10, color: "#374151" }}>
           Academy Management System
         </span>
-        <span style={{ fontSize: 10, color: "#4b5563" }}>
+        <span style={{ fontSize: 10, color: "#374151" }}>
           {new Date().toLocaleDateString("en-PK", { dateStyle: "medium" })}
         </span>
       </div>
