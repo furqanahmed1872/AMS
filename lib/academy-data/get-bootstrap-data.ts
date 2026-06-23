@@ -92,7 +92,7 @@ export async function getAcademyBootstrapData(
       .order("created_at", { ascending: false }),
     supabase
       .from("attendance_records")
-      .select("status")
+      .select("status, class_id")
       .eq("academy_id", academyId)
       .eq("date", now.toISOString().split("T")[0]),
   ]);
@@ -257,6 +257,9 @@ export async function getAcademyBootstrapData(
       totalTests: tests.length,
       collectedThisMonth,
       dueThisMonth,
+      classesAttendanceTakenToday: new Set(
+        todaysAttendanceRaw.map((a) => (a as { class_id: string }).class_id),
+      ).size,
     },
     todaysAttendance: {
       present: todaysAttendanceRaw.filter((a) => a.status === "P").length,

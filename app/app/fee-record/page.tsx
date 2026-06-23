@@ -8,7 +8,7 @@ import { useAcademyData } from "@/lib/academy-data/provider";
 import { getFeeRecordAction } from "@/lib/fees/fee-record-actions";
 import type { FeeRecordStudent } from "@/lib/fees/types";
 import { ACADEMIC_MONTHS } from "@/lib/fees/types";
-import { Download } from "lucide-react";
+import { Download, ArrowLeftRight } from "lucide-react";
 import { FeeRecordPDF } from "@/components/templates/pdf/FeeRecordPDF";
 import { exportElementAsPDF } from "@/lib/export/utils";
 
@@ -82,24 +82,24 @@ export default function FeeRecordPage() {
       <PageHeader title="Fee Record" subtitle="Yearly fee history by class" />
 
       <Card className="p-4">
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 items-center">
           <Select
             options={classOptions}
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="min-w-36"
+            className="w-full sm:w-auto sm:min-w-36"
           />
           <Select
             options={yearOptions}
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            className="min-w-28"
+            className="w-full sm:w-auto sm:min-w-28"
           />
         </div>
       </Card>
 
-      <div className="glass-card overflow-x-auto">
-        <div className="p-4 border-b border-white/8 flex items-center justify-between">
+      <div className="glass-card">
+        <div className="p-4 border-b border-white/8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h3 className="section-title">
             {selectedClassName} · Academic Year {yearLabel}
           </h3>
@@ -109,6 +109,7 @@ export default function FeeRecordPage() {
             icon={<Download size={14} />}
             loading={exportingPDF}
             onClick={handleExportPDF}
+            className="w-full sm:w-auto"
           >
             Download PDF
           </Button>
@@ -122,109 +123,100 @@ export default function FeeRecordPage() {
             year.
           </div>
         ) : (
-          <table className="w-full text-xs">
-            <thead className="bg-surface-2">
-              <tr>
-                <th className="table-header sticky left-0 bg-surface-2 z-10 min-w-10">
-                  Roll
-                </th>
-                <th className="table-header sticky left-10 bg-surface-2 z-10 min-w-32">
-                  Name
-                </th>
-                {monthLabels.map((m) => (
-                  <th key={m} className="table-header text-center min-w-14">
-                    {m}
-                  </th>
-                ))}
-                <th className="table-header text-center min-w-20 text-emerald-400/60">
-                  Grand Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((student) => {
-                const studentTotal = student.cells.reduce<number>(
-                  (sum, val) => sum + (typeof val === "number" ? val : 0),
-                  0,
-                );
-                return (
-                  <tr key={student.id} className="table-row">
-                    <td className="table-cell sticky left-0 bg-surface-1 font-bold text-white/40">
-                      #{student.rollNumber}
+          <>
+            <div className="sm:hidden flex items-center gap-1.5 px-4 pt-3 text-[11px] text-white/35">
+              <ArrowLeftRight size={12} />
+              Scroll sideways to see all months
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-surface-2">
+                  <tr>
+                    <th className="table-header sticky left-0 bg-surface-2 z-10 min-w-10">
+                      Roll
+                    </th>
+                    <th className="table-header sticky left-10 bg-surface-2 z-10 min-w-32">
+                      Name
+                    </th>
+                    {monthLabels.map((m) => (
+                      <th key={m} className="table-header text-center min-w-14">
+                        {m}
+                      </th>
+                    ))}
+                    <th className="table-header text-center min-w-20 text-emerald-400/60">
+                      Grand Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((student) => {
+                    const studentTotal = student.cells.reduce<number>(
+                      (sum, val) => sum + (typeof val === "number" ? val : 0),
+                      0,
+                    );
+                    return (
+                      <tr key={student.id} className="table-row">
+                        <td className="table-cell sticky left-0 bg-surface-1 font-bold text-white/40">
+                          #{student.rollNumber}
+                        </td>
+                        <td className="table-cell sticky left-10 bg-surface-1 font-medium">
+                          {student.name}
+                        </td>
+                        {student.cells.map((val, j) => (
+                          <td
+                            key={j}
+                            className={`px-2 py-3 text-center font-semibold ${
+                              val === "X"
+                                ? "text-rose-400"
+                                : val === null
+                                  ? "text-white/20"
+                                  : "text-emerald-400"
+                            }`}
+                          >
+                            {val === null
+                              ? "—"
+                              : val === "X"
+                                ? "✗"
+                                : val.toLocaleString()}
+                          </td>
+                        ))}
+                        <td className="px-2 py-3 text-center text-xs font-bold text-white/60 bg-surface-2">
+                          {studentTotal > 0
+                            ? `Rs. ${studentTotal.toLocaleString()}`
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Monthly totals row */}
+                  <tr className="border-t-2 border-brand-500/20 bg-surface-2">
+                    <td className="table-cell font-bold text-white/60 sticky left-0 bg-surface-2">
+                      Total
                     </td>
-                    <td className="table-cell sticky left-10 bg-surface-1 font-medium">
-                      {student.name}
+                    <td className="table-cell font-bold text-white/60 sticky left-10 bg-surface-2">
+                      Monthly
                     </td>
-                    {student.cells.map((val, j) => (
+                    {monthTotals.map((t, j) => (
                       <td
                         key={j}
-                        className={`px-2 py-3 text-center font-semibold ${
-                          val === "X"
-                            ? "text-rose-400"
-                            : val === null
-                              ? "text-white/20"
-                              : "text-emerald-400"
-                        }`}
+                        className="px-2 py-3 text-center text-xs font-bold text-brand-400"
                       >
-                        {val === null
-                          ? "—"
-                          : val === "X"
-                            ? "✗"
-                            : val.toLocaleString()}
+                        {t > 0 ? t.toLocaleString() : "—"}
                       </td>
                     ))}
-                    <td className="px-2 py-3 text-center text-xs font-bold text-white/60 bg-surface-2">
-                      {studentTotal > 0
-                        ? `Rs. ${studentTotal.toLocaleString()}`
+                    <td className="px-2 py-3 text-center text-xs font-bold text-brand-400">
+                      {grandTotal > 0
+                        ? `Rs. ${grandTotal.toLocaleString()}`
                         : "—"}
                     </td>
                   </tr>
-                );
-              })}
 
-              {/* Monthly totals row */}
-              <tr className="border-t-2 border-brand-500/20 bg-surface-2">
-                <td className="table-cell font-bold text-white/60 sticky left-0 bg-surface-2">
-                  Total
-                </td>
-                <td className="table-cell font-bold text-white/60 sticky left-10 bg-surface-2">
-                  Monthly
-                </td>
-                {monthTotals.map((t, j) => (
-                  <td
-                    key={j}
-                    className="px-2 py-3 text-center text-xs font-bold text-brand-400"
-                  >
-                    {t > 0 ? t.toLocaleString() : "—"}
-                  </td>
-                ))}
-                <td className="px-2 py-3 text-center text-xs font-bold text-brand-400">
-                  {grandTotal > 0 ? `Rs. ${grandTotal.toLocaleString()}` : "—"}
-                </td>
-              </tr>
-
-              {/* Grand total row */}
-              <tr className="border-t-2 border-emerald-500/30 bg-emerald-500/5">
-                <td className="table-cell font-bold text-emerald-400 sticky left-0 bg-emerald-500/5">
-                  Grand
-                </td>
-                <td className="table-cell font-bold text-emerald-400 sticky left-10 bg-emerald-500/5">
-                  Total
-                </td>
-                {monthTotals.map((t, j) => (
-                  <td
-                    key={j}
-                    className="px-2 py-3 text-center text-xs font-bold text-emerald-400"
-                  >
-                    {t > 0 ? t.toLocaleString() : "—"}
-                  </td>
-                ))}
-                <td className="px-2 py-3 text-center text-sm font-bold text-emerald-300 bg-emerald-500/10 rounded">
-                  Rs. {grandTotal.toLocaleString()}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+               
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

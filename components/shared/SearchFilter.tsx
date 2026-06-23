@@ -16,17 +16,53 @@ interface SearchFilterProps {
   className?: string;
 }
 
-export function SearchFilter({ searchValue, onSearchChange, searchPlaceholder = "Search...", filters, onReset, className }: SearchFilterProps) {
+export function SearchFilter({
+  searchValue,
+  onSearchChange,
+  searchPlaceholder = "Search...",
+  filters,
+  onReset,
+  className,
+}: SearchFilterProps) {
   return (
-    <div className={cn("flex flex-wrap gap-3 items-center", className)}>
-      <div className="flex-1 min-w-48">
-        <Input value={searchValue} onChange={(e) => onSearchChange(e.target.value)} placeholder={searchPlaceholder} icon={<Search size={14} />} className="h-10" />
+    <div
+      className={cn(
+        "flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-center",
+        className,
+      )}
+    >
+      <div className="w-full sm:flex-1 sm:min-w-48">
+        <Input
+          value={searchValue}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={searchPlaceholder}
+          icon={<Search size={14} />}
+          className="h-10"
+        />
       </div>
-      {filters?.map((f, i) => (
-        <Select key={i} options={f.options} value={f.value} onChange={(e) => f.onChange(e.target.value)} className="h-10 min-w-36" />
-      ))}
+      {filters && filters.length > 0 && (
+        <div className="grid grid-cols-2 sm:flex gap-3">
+          {filters.map((f, i) => (
+            <Select
+              key={i}
+              options={f.options}
+              value={f.value}
+              onChange={(e) => f.onChange(e.target.value)}
+              className="h-10 w-full sm:w-auto sm:min-w-36"
+            />
+          ))}
+        </div>
+      )}
       {onReset && (
-        <Button variant="ghost" size="sm" onClick={onReset} icon={<X size={14} />}>Reset</Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onReset}
+          icon={<X size={14} />}
+          className="self-start sm:self-auto"
+        >
+          Reset
+        </Button>
       )}
     </div>
   );

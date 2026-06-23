@@ -39,7 +39,7 @@ export default function NotificationsPage() {
               key={n.id}
               className={`p-4 ${!n.isResolved ? "border-amber-500/25 bg-amber-500/5" : "opacity-60"}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
                 <div
                   className={`p-2 rounded-xl shrink-0 ${n.isResolved ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}
                 >
@@ -49,14 +49,16 @@ export default function NotificationsPage() {
                     <Bell size={16} />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white/80">{n.message}</p>
+                <div className="flex-1 min-w-0 basis-[calc(100%-44px)] sm:basis-0">
+                  <p className="text-sm text-white/80 break-words">
+                    {n.message}
+                  </p>
                   <p className="text-xs text-white/40 mt-1">
                     {new Date(n.createdAt).toLocaleString()}
                   </p>
                 </div>
                 {!n.isResolved && (
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex gap-2 shrink-0 w-full sm:w-auto justify-end sm:justify-start pl-[44px] sm:pl-0">
                     {n.studentId && (
                       <Link href={`/app/students/${n.studentId}`}>
                         <Button
