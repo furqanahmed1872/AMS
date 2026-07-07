@@ -145,12 +145,10 @@ export function StudentCombinedCard({
   className,
   rollNumber,
   avgScore,
-  attendancePercent,
   scores,
   months,
 }: StudentCombinedCardProps) {
   const sHex = scoreHex(avgScore);
-  const aHex = attHex(attendancePercent);
   const gradeLabel = grade(avgScore);
 
   // ── Scores: collect all unique test names (column headers) ──────────────────
@@ -158,14 +156,22 @@ export function StudentCombinedCard({
     new Set(scores.flatMap((s) => s.tests.map((t) => t.name))),
   );
 
-  // ── Attendance: month labels (column headers) ───────────────────────────────
-  // Shorten "January 2025" → "Jan 25"
-  const shortMonth = (m: string) =>
-    m.replace(/^(\w{3})\w*\s(\d{2})\d{2}$/, "$1 '$2") || m.slice(0, 6);
+  // Client asked for the full month + year to be shown in the shared image
+  // (previously abbreviated to e.g. "Jul '26") — m.month already arrives as
+  // the full label, e.g. "July 2026", so it's rendered as-is below.
 
   const totalPresent = months.reduce((s, m) => s + m.present, 0);
   const totalAbsent = months.reduce((s, m) => s + m.absent, 0);
   const totalDays = totalPresent + totalAbsent;
+  // Derived from the same monthly rows rendered below, rather than the
+  // attendancePercent prop passed in — that prop can come from a separate,
+  // slower-to-refresh query than the monthly breakdown, which was causing
+  // the shared image's Total % (and the Attendance pill above it) to show
+  // 0% right after marking attendance for the first time, even though
+  // every visible monthly row was already correct.
+  const totalAttPct =
+    totalDays > 0 ? Math.round((totalPresent / totalDays) * 100) : 0;
+  const aHex = attHex(totalAttPct);
 
   return (
     <div id="student-combined-share-card" style={CARD}>
@@ -298,7 +304,7 @@ export function StudentCombinedCard({
               lineHeight: 1,
             }}
           >
-            {attendancePercent}%
+            {totalAttPct}%
           </div>
           <div
             style={{
@@ -463,8 +469,8 @@ export function StudentCombinedCard({
                 <tr>
                   <th style={{ ...TH_LABEL, minWidth: 80 }}>&nbsp;</th>
                   {months.map((m) => (
-                    <th key={m.month} style={{ ...TH_CENTER, minWidth: 52 }}>
-                      {shortMonth(m.month)}
+                    <th key={m.month} style={{ ...TH_CENTER, minWidth: 76 }}>
+                      {m.month}
                     </th>
                   ))}
                   <th style={{ ...TH_TOTAL, minWidth: 52 }}>Total</th>
@@ -555,7 +561,7 @@ export function StudentCombinedCard({
                     <span
                       style={{ fontWeight: 900, color: aHex, fontSize: 13 }}
                     >
-                      {attendancePercent}%
+                      {totalAttPct}%
                     </span>
                   </td>
                 </tr>

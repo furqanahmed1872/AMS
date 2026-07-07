@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -33,6 +34,7 @@ const statusVariantMap: Record<AttendanceStatus, string> = {
 };
 
 export default function AttendancePage() {
+  const router = useRouter();
   const { classes, students, academyName } = useAcademyData();
   const [exportingPDF, setExportingPDF] = useState(false);
   const today = new Date().toISOString().split("T")[0];
@@ -119,6 +121,16 @@ export default function AttendancePage() {
     } else {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      // Previously this relied entirely on the Supabase Realtime
+      // postgres_changes event (via RealtimeProvider) to eventually call
+      // router.refresh() — that's an async round-trip through Supabase's
+      // realtime infra and could lag a beat behind the save, which is why
+      // attendance-derived numbers (student profile, dashboard, WhatsApp
+      // share) felt slower to update than test scores. Calling
+      // router.refresh() here directly, the same way saveMarksAction's
+      // caller already does, makes the refresh immediate instead of
+      // depending on that round-trip.
+      router.refresh();
     }
   };
 

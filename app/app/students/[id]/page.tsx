@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -226,7 +226,6 @@ function ScoresTable({
 /** Cross-table: rows = Present/Absent/Days/%, columns = months */
 function AttendanceTable({
   attendance,
-  attendancePercent,
 }: {
   attendance: AttendanceByMonth[];
   attendancePercent: number;
@@ -242,10 +241,17 @@ function AttendanceTable({
   const totalPresent = attendance.reduce((s, m) => s + m.present, 0);
   const totalAbsent = attendance.reduce((s, m) => s + m.absent, 0);
   const totalDays = totalPresent + totalAbsent;
+  // Derived locally from the same rows the table renders, rather than the
+  // `attendancePercent` prop — that prop comes from a separate bootstrap
+  // query (see get-bootstrap-data.ts) that can lag behind a just-saved
+  // attendance mark until the next full refresh, which was showing as a
+  // stale 0% here right after marking attendance for the first time.
+  const totalPct =
+    totalDays > 0 ? Math.round((totalPresent / totalDays) * 100) : 0;
 
-  // Shorten "January 2025" → "Jan '25"
-  const shortLabel = (m: string) =>
-    m.replace(/^(\w{3})\w*\s(\d{2})(\d{2})$/, "$1 '$3") || m.slice(0, 7);
+  // Client asked for the full month + year to be shown (previously
+  // abbreviated to e.g. "Jul '26") — m.month already arrives as the full
+  // label, e.g. "July 2026", so just render it as-is.
 
   return (
     <div className="overflow-x-auto">
@@ -256,9 +262,9 @@ function AttendanceTable({
             {attendance.map((m) => (
               <th
                 key={m.month}
-                className="min-w-[56px] whitespace-nowrap border-b border-white/8 bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white/40"
+                className="min-w-[92px] whitespace-nowrap border-b border-white/8 bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white/40"
               >
-                {shortLabel(m.month)}
+                {m.month}
               </th>
             ))}
             <th className="min-w-[56px] whitespace-nowrap border-b border-l border-white/8 bg-surface-2 px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-white/40">
@@ -341,9 +347,9 @@ function AttendanceTable({
             <td className="border-l border-white/8 px-3 py-3 text-center">
               <span
                 className="text-sm font-bold"
-                style={{ color: attendanceHex(attendancePercent) }}
+                style={{ color: attendanceHex(totalPct) }}
               >
-                {attendancePercent}%
+                {totalPct}%
               </span>
             </td>
           </tr>
@@ -422,6 +428,21 @@ export default function StudentProfilePage({
   );
   const [feeHistory, setFeeHistory] = useState<FeeHistoryRow[] | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
+
+  // Modal/share data (scores, attendance) is fetched once per page load and
+  // cached in state above so re-opening a modal doesn't re-fetch. That
+  // caching meant a profile tab left open while attendance/marks were
+  // entered elsewhere would keep sharing stale numbers even after
+  // router.refresh() updated the bootstrap-level student record — the
+  // bootstrap refresh doesn't reset this component's own useState. Watching
+  // the two live bootstrap numbers here and clearing the cache when either
+  // changes ensures the next modal open / Share re-fetches fresh data.
+  useEffect(() => {
+    setScores(null);
+    setAttendance(null);
+    setFeeHistory(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.avgScore, student?.attendancePercent]);
 
   // ── Action state ──────────────────────────────────────────────────────────────
   const [showDeactivate, setShowDeactivate] = useState(false);

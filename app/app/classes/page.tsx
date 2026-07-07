@@ -5,7 +5,11 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useAcademyData } from "@/lib/academy-data/provider";
-import { createClassAction, deleteClassAction } from "@/lib/classes/actions";
+import {
+  createClassAction,
+  deleteClassAction,
+  updateClassAction,
+} from "@/lib/classes/actions";
 import {
   createSubjectAction,
   deleteSubjectAction,
@@ -13,6 +17,7 @@ import {
 import {
   Plus,
   Trash2,
+  Pencil,
   GraduationCap,
   BookOpen,
   Lightbulb,
@@ -31,6 +36,12 @@ export default function ClassesPage() {
   const [newClass, setNewClass] = useState({ name: "", section: "" });
   const [classError, setClassError] = useState("");
   const [isAddingClass, setIsAddingClass] = useState(false);
+
+  // Edit-class form state
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
+  const [editClass, setEditClass] = useState({ name: "", section: "" });
+  const [editClassError, setEditClassError] = useState("");
+  const [isSavingClass, setIsSavingClass] = useState(false);
 
   // Subject form state
   const [showSubjectForm, setShowSubjectForm] = useState(false);
@@ -80,6 +91,59 @@ export default function ClassesPage() {
     setNewClass({ name: "", section: "" });
     setClassError("");
     setShowClassForm(false);
+    router.refresh();
+  };
+
+  const startEditClass = (cls: {
+    id: string;
+    name: string;
+    section?: string;
+  }) => {
+    setEditingClassId(cls.id);
+    setEditClass({ name: cls.name, section: cls.section ?? "" });
+    setEditClassError("");
+    setShowClassForm(false);
+  };
+
+  const cancelEditClass = () => {
+    setEditingClassId(null);
+    setEditClass({ name: "", section: "" });
+    setEditClassError("");
+  };
+
+  const saveEditClass = async () => {
+    if (!editingClassId) return;
+    if (!editClass.name.trim()) {
+      setEditClassError("Class name is required");
+      return;
+    }
+    const displayName = editClass.section.trim()
+      ? `${editClass.name.trim()} ${editClass.section.trim()}`
+      : editClass.name.trim();
+    const exists = classes.find(
+      (c) =>
+        c.id !== editingClassId &&
+        c.displayName.toLowerCase() === displayName.toLowerCase(),
+    );
+    if (exists) {
+      setEditClassError("A class with this name and section already exists");
+      return;
+    }
+
+    setIsSavingClass(true);
+    const result = await updateClassAction(
+      editingClassId,
+      editClass.name.trim(),
+      editClass.section.trim(),
+    );
+    setIsSavingClass(false);
+
+    if (!result.success) {
+      setEditClassError(result.error ?? "Something went wrong.");
+      return;
+    }
+
+    cancelEditClass();
     router.refresh();
   };
 
@@ -157,6 +221,7 @@ export default function ClassesPage() {
                   setShowClassForm((v) => !v);
                   setClassError("");
                   setNewClass({ name: "", section: "" });
+                  cancelEditClass();
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
                   showClassForm
@@ -261,39 +326,125 @@ export default function ClassesPage() {
                   No classes yet. Add your first class above.
                 </div>
               ) : (
-                classes.map((cls) => (
-                  <div
-                    key={cls.id}
-                    className="flex items-center justify-between py-2.5 px-3 bg-surface-2 hover:bg-surface-3 rounded-xl group transition-all duration-150"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-400">
-                        <GraduationCap size={13} />
+                classes.map((cls) =>
+                  editingClassId === cls.id ? (
+                    <div
+                      key={cls.id}
+                      className="p-4 bg-surface-2 rounded-xl border border-brand-500/20 animate-scale-in space-y-3"
+                    >
+                      <p className="text-xs text-white/40 font-medium uppercase tracking-wider">
+                        Edit Class
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2 sm:col-span-1">
+                          <label className="form-label">Class Name *</label>
+                          <input
+                            type="text"
+                            className="input-field"
+                            placeholder="e.g. 10th, Grade 5"
+                            value={editClass.name}
+                            onChange={(e) => {
+                              setEditClass((p) => ({
+                                ...p,
+                                name: e.target.value,
+                              }));
+                              setEditClassError("");
+                            }}
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && saveEditClass()
+                            }
+                            autoFocus
+                          />
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <label className="form-label">
+                            Section{" "}
+                            <span className="text-white/30">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="input-field"
+                            placeholder="e.g. Blue, A, Red"
+                            value={editClass.section}
+                            onChange={(e) => {
+                              setEditClass((p) => ({
+                                ...p,
+                                section: e.target.value,
+                              }));
+                              setEditClassError("");
+                            }}
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && saveEditClass()
+                            }
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-white">
-                          {cls.displayName}
-                        </span>
-                        <span className="text-xs text-white/30 ml-2">
-                          {cls.studentCount} students
-                        </span>
+                      {editClassError && (
+                        <p className="text-xs text-rose-400">
+                          {editClassError}
+                        </p>
+                      )}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={cancelEditClass}
+                          className="flex-1 py-2 rounded-xl text-sm font-medium border border-white/10 text-white/50 hover:text-white hover:border-white/25 transition-all duration-200 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveEditClass}
+                          disabled={isSavingClass}
+                          className="flex-1 py-2 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-glow transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          {isSavingClass ? "Saving..." : "Save Changes"}
+                        </button>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDeleteTarget({
-                          type: "class",
-                          id: cls.id,
-                          name: cls.displayName,
-                        })
-                      }
-                      className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/15 text-rose-400/60 hover:text-rose-400 rounded-lg transition-all duration-150 cursor-pointer"
+                  ) : (
+                    <div
+                      key={cls.id}
+                      className="flex items-center justify-between py-2.5 px-3 bg-surface-2 hover:bg-surface-3 rounded-xl group transition-all duration-150"
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-400">
+                          <GraduationCap size={13} />
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-white">
+                            {cls.displayName}
+                          </span>
+                          <span className="text-xs text-white/30 ml-2">
+                            {cls.studentCount} students
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
+                        <button
+                          type="button"
+                          onClick={() => startEditClass(cls)}
+                          className="p-1.5 hover:bg-brand-500/15 text-white/40 hover:text-brand-400 rounded-lg transition-all duration-150 cursor-pointer"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDeleteTarget({
+                              type: "class",
+                              id: cls.id,
+                              name: cls.displayName,
+                            })
+                          }
+                          className="p-1.5 hover:bg-rose-500/15 text-rose-400/60 hover:text-rose-400 rounded-lg transition-all duration-150 cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ),
+                )
               )}
             </div>
           </Card>

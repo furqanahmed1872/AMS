@@ -54,7 +54,14 @@ export default function NotificationsPage() {
                     {n.message}
                   </p>
                   <p className="text-xs text-white/40 mt-1">
-                    {new Date(n.createdAt).toLocaleString()}
+                    {new Date(n.createdAt).toLocaleString("en-PK", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
                   </p>
                 </div>
                 {!n.isResolved && (

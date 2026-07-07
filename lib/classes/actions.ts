@@ -42,6 +42,44 @@ export async function createClassAction(
   return { success: true };
 }
 
+export async function updateClassAction(
+  classId: string,
+  name: string,
+  section: string,
+): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session)
+    return {
+      success: false,
+      error: "Your session has expired. Please sign in again.",
+    };
+
+  const trimmedName = name.trim();
+  if (!trimmedName) return { success: false, error: "Class name is required." };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("classes")
+    .update({
+      name: trimmedName,
+      section: section.trim() || null,
+    })
+    .eq("id", classId)
+    .eq("academy_id", session.academyId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        success: false,
+        error: "A class with this name and section already exists.",
+      };
+    }
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function deleteClassAction(
   classId: string,
 ): Promise<ActionResult> {

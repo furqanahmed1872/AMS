@@ -153,6 +153,17 @@ export async function updateStudentAction(
     return { success: false, error: "Student name is required." };
 
   const supabase = createServiceClient();
+
+  // Fetch the current fee before overwriting it — needed below to detect
+  // the "fee just got assigned" transition (was null, now set) so any
+  // pending fee_not_set notification for this student can be auto-resolved.
+  const { data: before } = await supabase
+    .from("students")
+    .select("monthly_fee")
+    .eq("id", studentId)
+    .eq("academy_id", session.academyId)
+    .single();
+
   const { error } = await supabase
     .from("students")
     .update({
@@ -177,6 +188,23 @@ export async function updateStudentAction(
         error: "Roll number already taken in this class.",
       };
     return { success: false, error: error.message };
+  }
+
+  // Fee was just assigned for the first time (previously null/not-set,
+  // now set) — auto-resolve any outstanding "fee not set" notification for
+  // this student so the Notifications list only ever shows students who
+  // genuinely still need a fee assigned, instead of accumulating forever
+  // as fees get assigned to more and more students.
+  const feeJustAssigned = before?.monthly_fee == null && !!monthlyFee;
+  if (feeJustAssigned) {
+    await supabase
+      .from("notifications")
+      .update({ is_resolved: true })
+      .eq("academy_id", session.academyId)
+      .eq("student_id", studentId)
+      .eq("type", "fee_not_set")
+      .eq("is_resolved", false);
+    revalidatePath("/app/notifications");
   }
 
   revalidatePath("/app/students");
