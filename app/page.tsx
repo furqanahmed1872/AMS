@@ -38,7 +38,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-glow">
-              <GraduationCap size={16} className="text-white" />
+              <img src="logo.png" alt="" className="w-5 h-5" />
             </div>
             <span className="font-bold text-white font-display">AMS</span>
           </div>
@@ -223,7 +223,7 @@ export default function LandingPage() {
       <footer className="border-t border-white/6 py-8 px-4 text-center text-xs text-white/30">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-brand-600/50 rounded-lg flex items-center justify-center"><GraduationCap size={12} /></div>
+            <div className="w-6 h-6 bg-brand-600/50 rounded-lg flex items-center justify-center"><img src="logo.png" alt="" className="w-4 h-4" /></div>
             <span>Academy Management System © {new Date().getFullYear()}</span>
           </div>
           <div className="flex gap-6">

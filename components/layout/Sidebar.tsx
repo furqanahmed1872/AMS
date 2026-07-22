@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -52,8 +53,8 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
       {/* Logo */}
       <div className="p-5 border-b border-white/8">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center shadow-glow">
-            <GraduationCap size={18} className="text-white" />
+          <div className="w-9 h-9 overflow-hidden rounded-xl shadow-glow">
+            <Image src="/logo.png" alt={`${academyName} logo`} width={36} height={36} className="h-full w-full object-cover" />
           </div>
           <div>
             <div className="font-bold text-sm font-display text-white">{academyName}</div>
@@ -113,8 +114,8 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
       {/* Mobile Topbar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface-1 border-b border-white/8 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center shadow-glow">
-            <GraduationCap size={15} className="text-white" />
+          <div className="w-8 h-8 overflow-hidden rounded-xl shadow-glow">
+            <Image src="/logo.png" alt={`${academyName} logo`} width={32} height={32} className="h-full w-full object-cover" />
           </div>
           <span className="font-bold text-sm font-display">{academyName}</span>
         </div>

@@ -65,7 +65,7 @@ function LoginPage() {
         <div className="glass-card p-8 animate-scale-in">
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center shadow-glow mb-4">
-              <GraduationCap size={28} className="text-white" />
+              <img src="logo.png" alt="" className="w-10 h-10" />
             </div>
             <h1 className="text-xl font-bold font-display text-white">
               Academy Management System
