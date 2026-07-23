@@ -14,6 +14,7 @@ import {
 import { Download } from "lucide-react";
 import { TestRecordPDF } from "@/components/templates/pdf/TestRecordPDF";
 import { exportElementAsPDF } from "@/lib/export/utils";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 const COLORS = [
   "#818cf8",
@@ -27,7 +28,8 @@ const COLORS = [
 ];
 
 export default function TestRecordPage() {
-  const { classes, subjects, academyName } = useAcademyData();
+  const { classes, subjects, academyName, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["subjects", "classes"]);
 
   const [cls, setCls] = useState(classes[0]?.id ?? "");
   const [subject, setSubject] = useState(subjects[0]?.id ?? "");

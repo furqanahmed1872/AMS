@@ -23,13 +23,15 @@ import {
   Lightbulb,
   X,
 } from "lucide-react";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 export default function ClassesPage() {
   const router = useRouter();
   // classes/subjects used to be useState(CLASSES)/useState(SUBJECTS) — now
   // read straight from the real bootstrap data; router.refresh() after each
   // mutation pulls a fresh copy through app/app/layout.tsx.
-  const { classes, subjects } = useAcademyData();
+const { classes, subjects, academyId } = useAcademyData();
+useRealtimeSync(academyId, ["classes", "subjects"]);
 
   // Class form state
   const [showClassForm, setShowClassForm] = useState(false);
@@ -152,8 +154,8 @@ export default function ClassesPage() {
       setSubjectError("Subject name is required");
       return;
     }
-    const exists = subjects.find(
-      (s) => s.name.toLowerCase() === newSubject.trim().toLowerCase(),
+    const exists = subjects?.find(
+      (s : { name: string }) => s.name.toLowerCase() === newSubject.trim().toLowerCase(),
     );
     if (exists) {
       setSubjectError("This subject already exists");

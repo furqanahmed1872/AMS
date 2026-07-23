@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { useAcademyData } from "@/lib/academy-data/provider";
 import { getTestMarksAction, saveMarksAction } from "@/lib/tests/actions";
 import { ArrowLeft, Save } from "lucide-react";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 export default function MarksEntryPage({
   params,
@@ -17,8 +18,8 @@ export default function MarksEntryPage({
 }) {
   const { id } = React.use(params);
   const router = useRouter();
-  const { tests, students } = useAcademyData();
-
+  const { tests, students, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["students", "tests"]);
   const test = tests.find((t) => t.id === id);
 
   const classStudents = students

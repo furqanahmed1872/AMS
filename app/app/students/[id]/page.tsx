@@ -38,6 +38,7 @@ import {
 import { StudentCombinedCard } from "@/components/templates/share/StudentCombinedCard";
 import { shareElementAsImage } from "@/lib/export/utils";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 // ─── Pure helpers (no hooks, no side-effects) ─────────────────────────────────
 
@@ -414,7 +415,8 @@ export default function StudentProfilePage({
 }) {
   const { id } = React.use(params);
   const router = useRouter();
-  const { role, students, academyName } = useAcademyData();
+  const { role, students, academyName, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["students", "classes"]);
   const student = students.find((s) => s.id === id);
 
   // ── Modal state ───────────────────────────────────────────────────────────────

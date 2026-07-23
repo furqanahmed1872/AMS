@@ -4,7 +4,6 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { getSession } from "@/lib/auth/session";
 import { getAcademyBootstrapData } from "@/lib/academy-data/get-bootstrap-data";
 import { AcademyDataProvider } from "@/lib/academy-data/provider";
-import { RealtimeProvider } from "@/components/providers/RealtimeProvider";
 
 export default async function AppLayout({
   children,
@@ -12,7 +11,6 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
-  console.log("Session in layout:", session);
   if (!session) redirect("/login");
 
   const data = await getAcademyBootstrapData(session.academyId);

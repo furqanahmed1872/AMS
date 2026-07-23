@@ -104,7 +104,7 @@ export async function getMonthlyAttendanceAction(
   const lastDay = new Date(year, month, 0).getDate();
   const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-  const [studentsRes, attendanceRes, feeRes] = await Promise.all([
+  const [studentsRes, attendanceRes] = await Promise.all([
     supabase
       .from("students")
       .select("id, name, roll_number, monthly_fee")
@@ -119,25 +119,13 @@ export async function getMonthlyAttendanceAction(
       .eq("academy_id", session.academyId)
       .gte("date", startDate)
       .lte("date", endDate),
-    supabase
-      .from("fee_records")
-      .select("student_id, status")
-      .eq("academy_id", session.academyId)
-      .eq("month", month)
-      .eq("year", year)
-      .in(
-        "student_id",
-        // We'll fill this in after we know the student ids — but supabase
-        // doesn't support subqueries, so we fetch all and filter client-side
-        [],
-      ),
   ]);
 
   const students = studentsRes.data ?? [];
   const attendanceRaw = attendanceRes.data ?? [];
 
   // Fetch fee records for just this class's students
-  const studentIds = students.map((s) => s.id);
+  const studentIds = students.map((s : any) => s.id);
   const feeRecordsRes = await supabase
     .from("fee_records")
     .select("student_id, status")
@@ -152,7 +140,7 @@ export async function getMonthlyAttendanceAction(
     );
 
   const feeByStudent = new Map(
-    (feeRecordsRes.data ?? []).map((r) => [
+    (feeRecordsRes.data ?? []).map((r : any) => [
       r.student_id,
       r.status as "paid" | "unpaid",
     ]),
@@ -166,9 +154,11 @@ export async function getMonthlyAttendanceAction(
     daysByStudent[row.student_id][dayNum] = row.status as AttendanceStatus;
   }
 
-  return students.map((s) => {
+  return students.map((s : any) => {
     const feeStatus: MonthlyStudentRow["feeStatus"] =
-      s.monthly_fee == null ? "not_set" : (feeByStudent.get(s.id) ?? "unpaid");
+      s.monthly_fee == null
+        ? "not_set"
+        : ((feeByStudent.get(s.id) as "paid" | "unpaid") ?? "unpaid");
     return {
       studentId: s.id,
       name: s.name,

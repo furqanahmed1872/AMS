@@ -11,6 +11,7 @@ import { ACADEMIC_MONTHS } from "@/lib/fees/types";
 import { Download, ArrowLeftRight } from "lucide-react";
 import { FeeRecordPDF } from "@/components/templates/pdf/FeeRecordPDF";
 import { exportElementAsPDF } from "@/lib/export/utils";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 // Academic year: May of startYear through March of startYear+1
 const monthLabels = ACADEMIC_MONTHS.map((m) => m.label);
@@ -29,7 +30,8 @@ function buildYearOptions() {
 const yearOptions = buildYearOptions();
 
 export default function FeeRecordPage() {
-  const { classes, academyName } = useAcademyData();
+  const { classes, academyName, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["classes", "students", "fee_records"]);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [selectedClass, setSelectedClass] = useState(classes[0]?.id ?? "");
   const [year, setYear] = useState(yearOptions[0].value);

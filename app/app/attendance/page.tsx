@@ -8,6 +8,7 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAcademyData } from "@/lib/academy-data/provider";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 import {
   getAttendanceForDateAction,
   saveAttendanceAction,
@@ -35,7 +36,8 @@ const statusVariantMap: Record<AttendanceStatus, string> = {
 
 export default function AttendancePage() {
   const router = useRouter();
-  const { classes, students, academyName } = useAcademyData();
+  const { classes, students, academyName, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["students", "classes", "attendance_records"]);
   const [exportingPDF, setExportingPDF] = useState(false);
   const today = new Date().toISOString().split("T")[0];
 

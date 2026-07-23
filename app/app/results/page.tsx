@@ -9,6 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useAcademyData } from "@/lib/academy-data/provider";
 import { getTestResultsAction, type ResultRow } from "@/lib/tests/actions";
 import { Trophy, Users, TrendingUp, Award, Play } from "lucide-react";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 const gradeColor = (pct: number) =>
   pct >= 80
@@ -23,7 +24,8 @@ const grade = (pct: number) =>
   pct >= 80 ? "A" : pct >= 60 ? "B" : pct >= 45 ? "C" : pct >= 33 ? "D" : "F";
 
 export default function ResultsPage() {
-  const { tests } = useAcademyData();
+  const { tests, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["tests"]);
 
   const testOptions = tests.map((t) => ({
     value: t.id,

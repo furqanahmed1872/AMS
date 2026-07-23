@@ -20,20 +20,30 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import { useAcademyData } from "@/lib/academy-data/provider";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 import { formatCurrency, getCurrentMonthYear } from "@/lib/utils";
 
 export default function DashboardPage() {
-  // Same shapes the dummy arrays used to provide — DASHBOARD_STATS,
-  // STUDENTS, NOTIFICATIONS, TESTS — now backed by the real bootstrap
-  // fetch in app/app/layout.tsx.
   const {
     role,
+    academyId,
     students,
     tests,
     notifications,
     dashboardStats,
     todaysAttendance,
   } = useAcademyData();
+
+  useRealtimeSync(academyId, [
+    "students",
+    "classes",
+    "subjects",
+    "tests",
+    "notifications",
+    "attendance_records",
+    "fee_records",
+    "test_results",
+  ]);
 
   // "Recent" wasn't actually sorted in the dummy version (it just took the
   // first 5 in declaration order) — sorting by admission date descending

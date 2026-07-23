@@ -8,10 +8,12 @@ import { Card } from "@/components/ui/Card";
 import { useAcademyData } from "@/lib/academy-data/provider";
 import { Bell, CheckCircle2, ExternalLink } from "lucide-react";
 import { resolveNotificationAction } from "@/lib/notifications/actions";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { notifications } = useAcademyData();
+    const { notifications, academyId } = useAcademyData();
+    useRealtimeSync(academyId, ["notifications"]);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const handleResolve = async (id: string) => {

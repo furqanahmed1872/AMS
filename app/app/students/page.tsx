@@ -9,11 +9,13 @@ import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
 import { useAcademyData } from "@/lib/academy-data/provider";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Users, Phone, ChevronRight } from "lucide-react";
 
 export default function StudentsPage() {
-  const { role, students, classes } = useAcademyData();
+const { classes, students, role, academyId } = useAcademyData();
+useRealtimeSync(academyId, ["students", "classes", "attendance_records"]);
 
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("all");

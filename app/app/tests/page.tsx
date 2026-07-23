@@ -13,11 +13,12 @@ import { SearchFilter } from "@/components/shared/SearchFilter";
 import { useAcademyData } from "@/lib/academy-data/provider";
 import { createTestAction } from "@/lib/tests/actions";
 import { Plus, BookOpen, ArrowRight } from "lucide-react";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 export default function TestsPage() {
   const router = useRouter();
-  const { tests, classes, subjects } = useAcademyData();
-
+  const { tests, classes, subjects, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["subjects", "classes", "tests"]);
   const [showCreate, setShowCreate] = useState(false);
   const [classFilter, setClassFilter] = useState("all");
   const [subjectFilter, setSubjectFilter] = useState("all");

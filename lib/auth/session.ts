@@ -57,8 +57,18 @@ export async function getSession(): Promise<SignedPayload | null> {
   const raw = cookieStore.get(COOKIE_NAME)?.value;
   if (!raw) return null;
 
-  const [encoded, signature] = raw.split(".");
-  if (!encoded || !signature || sign(encoded) !== signature) return null;
+const [encoded, signature] = raw.split(".");
+if (!encoded || !signature) return null;
+
+const expected = sign(encoded);
+const expectedBuf = Buffer.from(expected);
+const actualBuf = Buffer.from(signature);
+if (
+  expectedBuf.length !== actualBuf.length ||
+  !crypto.timingSafeEqual(expectedBuf, actualBuf)
+) {
+  return null;
+}
 
   try {
     const payload: SignedPayload = JSON.parse(

@@ -23,11 +23,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import type { Student } from "@/lib/academy-data/types";
+import { useRealtimeSync } from "@/components/providers/RealtimeProvider";
 
 export default function FeesPage() {
   const router = useRouter();
-  const { students, classes } = useAcademyData();
-
+  const { students, classes, academyId } = useAcademyData();
+  useRealtimeSync(academyId, ["students", "classes"]);
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
