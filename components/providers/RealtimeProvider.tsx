@@ -31,30 +31,25 @@ const DERIVED_TABLES = [
 export type WatchedTable = EntityTable | (typeof DERIVED_TABLES)[number];
 
 const DERIVED_DEBOUNCE_MS = 800;
+const REALTIME_TOKEN_COOKIE = "realtime_token";
 
 function isEntityTable(table: WatchedTable): table is EntityTable {
   return (ENTITY_TABLES as readonly string[]).includes(table);
 }
 
 /**
- * Scoped, page-level replacement for the old global RealtimeProvider that
- * used to mount in app/app/layout.tsx and subscribe to all 8 tables for
- * every connected client, calling router.refresh() (a full 10-query
- * bootstrap re-fetch) on every single row event.
- *
- * Call this from whichever page needs live updates, passing only the
- * tables that page actually renders — e.g. Dashboard watches everything,
- * Classes only needs ["classes", "students"].
- *
- *   const { academyId } = useAcademyData();
- *   useRealtimeSync(academyId, ["students", "classes", "attendance_records"]);
- *
- * - Entity tables (students/classes/subjects/tests/notifications) patch
- *   context directly from the realtime payload — no network round trip.
- * - Derived tables (attendance_records/fee_records/test_results) debounce
- *   a single getAcademyDerivedStats() call (5 queries) instead of the old
- *   full-bootstrap refresh (10 queries) per row event.
+ * Reads the academy-scoped JWT set by loginAction() (lib/auth/actions.ts).
+ * Passing this to supabase.realtime.setAuth() lets RLS policies check
+ * auth.jwt() ->> 'academy_id' against it, instead of granting anon a
+ * blanket read across every academy's rows.
  */
+function getRealtimeToken(): string | null {
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${REALTIME_TOKEN_COOKIE}=([^;]+)`),
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export function useRealtimeSync(
   academyId: string,
   tables: WatchedTable[],
@@ -66,6 +61,11 @@ export function useRealtimeSync(
   useEffect(() => {
     const watched = tablesKey.split(",").filter(Boolean) as WatchedTable[];
     if (!academyId || watched.length === 0) return;
+
+    const token = getRealtimeToken();
+    if (token) {
+      supabase.realtime.setAuth(token);
+    }
 
     const scheduleDerivedRefresh = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

@@ -1,6 +1,7 @@
 "use server";
 
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createSession, destroySession } from "@/lib/auth/session";
 import type { Role } from "@/lib/academy-data/types";
@@ -9,6 +10,9 @@ export interface LoginResult {
   success: boolean;
   error?: string;
 }
+
+const REALTIME_TOKEN_COOKIE = "realtime_token";
+const REALTIME_TOKEN_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function loginAction(
   role: Role,
@@ -80,6 +84,30 @@ export async function loginAction(
     role,
   });
 
+  // Realtime auth: a short-lived JWT carrying academy_id, so RLS policies
+  // on the realtime tables can scope SELECT to auth.jwt() ->> 'academy_id'
+  // instead of granting anon a blanket read across every academy. This
+  // token is readable by client JS on purpose (RealtimeProvider needs it
+  // in the browser) — it only grants read access to this one academy's
+  // rows, nothing more, and expires in 7 days.
+  const realtimeToken = jwt.sign(
+    {
+      academy_id: matchedAcademy.id,
+      role: "authenticated",
+    },
+    process.env.SUPABASE_JWT_SECRET!,
+    { expiresIn: "7d" },
+  );
+
+  const cookieStore = await cookies();
+  cookieStore.set(REALTIME_TOKEN_COOKIE, realtimeToken, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: REALTIME_TOKEN_MAX_AGE,
+    path: "/",
+  });
+
   const forwardedFor = (await headers()).get("x-forwarded-for");
   await supabase.from("session_logs").insert({
     academy_id: matchedAcademy.id,
@@ -92,4 +120,6 @@ export async function loginAction(
 
 export async function logoutAction(): Promise<void> {
   await destroySession();
+  const cookieStore = await cookies();
+  cookieStore.delete(REALTIME_TOKEN_COOKIE);
 }

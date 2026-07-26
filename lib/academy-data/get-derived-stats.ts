@@ -15,13 +15,6 @@ export interface DerivedStats {
   marksEnteredByTest: Record<string, number>;
 }
 
-/**
- * Companion to getAcademyBootstrapData() — re-fetches only the 5 queries
- * whose numbers move when attendance_records, fee_records, or test_results
- * change. Used by useRealtimeSync() (components/providers/RealtimeProvider.tsx)
- * instead of the old router.refresh(), which re-ran the full 10-query
- * bootstrap on every single row event.
- */
 export async function getAcademyDerivedStats(
   academyId: string,
 ): Promise<DerivedStats> {

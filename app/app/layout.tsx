@@ -32,8 +32,7 @@ export default async function AppLayout({
               academyName: session.academyName,
             }}
           >
-              {children}
-            
+            {children}
           </AcademyDataProvider>
         </div>
       </main>

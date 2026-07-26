@@ -44,7 +44,6 @@ export default function DashboardPage() {
     "fee_records",
     "test_results",
   ]);
-
   // "Recent" wasn't actually sorted in the dummy version (it just took the
   // first 5 in declaration order) — sorting by admission date descending
   // makes "Recent Students" mean what it says now that the data is real.

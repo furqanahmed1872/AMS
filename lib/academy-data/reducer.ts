@@ -6,18 +6,7 @@ import type {
   Test,
   Notification,
 } from "./types";
-export interface DerivedStats {
-  dashboardStats: {
-    collectedThisMonth: number;
-    dueThisMonth: number;
-    classesAttendanceTakenToday: number;
-  };
-  todaysAttendance: { present: number; absent: number; leave: number };
-  avgScoreByStudent: Record<string, number>;
-  attendanceByStudent: Record<string, number>;
-  feeStatusByStudent: Record<string, "paid" | "unpaid">;
-  marksEnteredByTest: Record<string, number>;
-}
+import type { DerivedStats } from "./get-derived-stats";
 
 export type EntityTable =
   | "students"
@@ -46,16 +35,6 @@ export type AcademyDataAction = EntityPatchAction | DerivedMergeAction;
 const displayName = (name: string, section: string | null | undefined) =>
   section ? `${name} ${section}` : name;
 
-/**
- * Replaces the old blind router.refresh() pattern. Entity tables
- * (students/classes/subjects/tests/notifications) are patched directly
- * from the realtime payload — no network call. attendance_records,
- * fee_records, and test_results feed derived numbers (avgScore,
- * attendancePercent, feeStatus, dashboardStats) that can't be computed
- * from a single row payload, so those arrive via DERIVED_MERGE, built
- * from the lightweight getAcademyDerivedStats() query in
- * get-derived-stats.ts instead of the full 10-query bootstrap.
- */
 export function academyDataReducer(
   state: AcademyBootstrapData,
   action: AcademyDataAction,
@@ -82,31 +61,51 @@ export function academyDataReducer(
       })),
     };
   }
-
-  const { table, event, newRow, oldRow } = action;
-  switch (table) {
-    case "classes":
-      return { ...state, classes: patchClasses(state, event, newRow, oldRow) };
-    case "subjects":
-      return {
-        ...state,
-        subjects: patchSubjects(state, event, newRow, oldRow),
-      };
-    case "students":
-      return {
-        ...state,
-        students: patchStudents(state, event, newRow, oldRow),
-      };
-    case "tests":
-      return { ...state, tests: patchTests(state, event, newRow, oldRow) };
-    case "notifications":
-      return {
-        ...state,
-        notifications: patchNotifications(state, event, newRow, oldRow),
-      };
-    default:
-      return state;
+const { table, event, newRow, oldRow } = action;
+switch (table) {
+  case "classes": {
+    const classes = patchClasses(state, event, newRow, oldRow);
+    return {
+      ...state,
+      classes,
+      dashboardStats: {
+        ...state.dashboardStats,
+        totalClasses: classes.length,
+      },
+    };
   }
+  case "subjects":
+    return {
+      ...state,
+      subjects: patchSubjects(state, event, newRow, oldRow),
+    };
+  case "students": {
+    const students = patchStudents(state, event, newRow, oldRow);
+    return {
+      ...state,
+      students,
+      dashboardStats: {
+        ...state.dashboardStats,
+        activeStudents: students.filter((s) => s.status === "active").length,
+      },
+    };
+  }
+  case "tests": {
+    const tests = patchTests(state, event, newRow, oldRow);
+    return {
+      ...state,
+      tests,
+      dashboardStats: { ...state.dashboardStats, totalTests: tests.length },
+    };
+  }
+  case "notifications":
+    return {
+      ...state,
+      notifications: patchNotifications(state, event, newRow, oldRow),
+    };
+  default:
+    return state;
+}
 }
 
 function patchClasses(
@@ -248,8 +247,6 @@ function patchNotifications(
   newRow: Record<string, unknown> | null,
   oldRow: Record<string, unknown> | null,
 ): Notification[] {
-  // Bootstrap only ever loads is_resolved = false, so a row flipping to
-  // resolved is treated as a removal, matching what the query would return.
   if (event === "DELETE") {
     const id = oldRow?.id as string;
     return state.notifications.filter((n) => n.id !== id);

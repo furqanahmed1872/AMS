@@ -14,15 +14,6 @@ const AcademyDataContext = createContext<AcademyContextValue | null>(null);
 const AcademyDataDispatchContext =
   createContext<Dispatch<AcademyDataAction> | null>(null);
 
-/**
- * Wraps everything rendered inside app/app/layout.tsx. The initial value
- * still comes from the server-side bootstrap fetch (get-bootstrap-data.ts)
- * — nothing changes about first load. What's new: the bootstrap data now
- * lives in a reducer, so useRealtimeSync() (see
- * components/providers/RealtimeProvider.tsx) can patch individual rows in
- * from realtime events instead of the old approach, which threw the whole
- * dataset away and re-fetched it on every table change via router.refresh().
- */
 export function AcademyDataProvider({
   value,
   children,
@@ -57,7 +48,6 @@ export function useAcademyData(): AcademyContextValue {
   return ctx;
 }
 
-/** Internal — used by useRealtimeSync() to push patches into the context. */
 export function useAcademyDataDispatch(): Dispatch<AcademyDataAction> {
   const ctx = useContext(AcademyDataDispatchContext);
   if (!ctx) {
