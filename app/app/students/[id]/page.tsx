@@ -36,6 +36,7 @@ import {
   type ScoreBySubject,
 } from "@/lib/students/actions";
 import { StudentCombinedCard } from "@/components/templates/share/StudentCombinedCard";
+import { ParentAccessButton } from "@/components/parent-portal/ParentAccessButton";
 import { shareElementAsImage } from "@/lib/export/utils";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -589,6 +590,7 @@ export default function StudentProfilePage({
                 Deactivate
               </Button>
             )}
+            {role === "admin" && <ParentAccessButton studentId={id} />}
             <Link href={`/app/students/${id}/analytics`}>
               <Button variant="ghost" size="sm" icon={<BarChart3 size={14} />}>
                 Analytics

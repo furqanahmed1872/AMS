@@ -16,17 +16,22 @@ import {
 } from "@/lib/fees/actions";
 import { formatCurrency } from "@/lib/utils";
 import {
+  FeeReceiptModal,
+  type FeeReceiptData,
+} from "@/components/fees/FeeReceiptModal";
+import {
   DollarSign,
   CheckCircle2,
   Clock,
   AlertTriangle,
   RefreshCw,
+  MessageCircle,
 } from "lucide-react";
 import type { Student } from "@/lib/academy-data/types";
 
 export default function FeesPage() {
   const router = useRouter();
-  const { students, classes } = useAcademyData();
+  const { students, classes, academyName } = useAcademyData();
 
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -37,6 +42,7 @@ export default function FeesPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [payError, setPayError] = useState("");
+  const [receipt, setReceipt] = useState<FeeReceiptData | null>(null);
 
   const classOptions = classes.map((c) => ({
     value: c.id,
@@ -89,7 +95,19 @@ export default function FeesPage() {
       setPayError(result.error ?? "Something went wrong.");
       return;
     }
+    const paidStudent = confirmPay;
     setConfirmPay(null);
+    setReceipt({
+      academyName,
+      studentName: paidStudent.name,
+      rollNumber: paidStudent.rollNumber,
+      className:
+        classes.find((c) => c.id === paidStudent.classId)?.displayName ?? "",
+      monthLabel,
+      amountPaid: paidStudent.monthlyFee ?? 0,
+      paidDate: new Date().toISOString(),
+      phone: paidStudent.phone ?? "",
+    });
     router.refresh();
   };
 
@@ -107,7 +125,21 @@ export default function FeesPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <PageHeader title="Fees" subtitle="Manage monthly fee payments" />
+      <PageHeader
+        title="Fees"
+        subtitle="Manage monthly fee payments"
+        actions={
+          <Link href="/app/fees/reminders">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<MessageCircle size={14} />}
+            >
+              Reminders
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Controls */}
       <Card className="p-4">
@@ -217,6 +249,26 @@ export default function FeesPage() {
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 size={14} className="text-emerald-400" />
                         <Badge variant="paid">Paid</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setReceipt({
+                              academyName,
+                              studentName: student.name,
+                              rollNumber: student.rollNumber,
+                              className:
+                                classes.find((c) => c.id === student.classId)
+                                  ?.displayName ?? "",
+                              monthLabel,
+                              amountPaid: student.monthlyFee ?? 0,
+                              paidDate: null,
+                              phone: student.phone ?? "",
+                            })
+                          }
+                        >
+                          Receipt
+                        </Button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
@@ -257,6 +309,12 @@ export default function FeesPage() {
             : "")
         }
         confirmLabel="Confirm Payment"
+      />
+
+      <FeeReceiptModal
+        isOpen={!!receipt}
+        onClose={() => setReceipt(null)}
+        data={receipt}
       />
     </div>
   );

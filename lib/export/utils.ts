@@ -109,3 +109,57 @@ export async function shareElementAsImage(
     URL.revokeObjectURL(url);
   }, "image/png");
 }
+
+/**
+ * Same capture as shareElementAsImage, but always tries Web Share API
+ * first (image + text together — WhatsApp shows both when the user
+ * picks a contact), and on desktop falls back to downloading the image
+ * plus opening a wa.me text-only link as a second tab, since desktop
+ * WhatsApp Web has no reliable way to pre-attach an image via URL.
+ */
+export async function shareElementAsImageToPhone(
+  elementId: string,
+  text: string,
+  filename: string,
+): Promise<{ method: "share" | "download+link" | "failed" }> {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.error(`Element #${elementId} not found`);
+    return { method: "failed" };
+  }
+
+  const html2canvas = (await import("html2canvas")).default;
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+  });
+
+  return new Promise((resolve) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) return resolve({ method: "failed" });
+
+      const file = new File([blob], `${filename}.png`, { type: "image/png" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text, title: filename });
+          return resolve({ method: "share" });
+        } catch (err) {
+          if ((err as Error).name === "AbortError")
+            return resolve({ method: "failed" });
+        }
+      }
+
+      // Desktop fallback: download the image, caller opens wa.me text link separately.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      resolve({ method: "download+link" });
+    }, "image/png");
+  });
+}
