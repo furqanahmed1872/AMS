@@ -23,7 +23,7 @@ jobs:
       - name: Checkout backups repo
         uses: actions/checkout@v4
         with:
-          repository: YOUR_GITHUB_USERNAME/ams-backups
+          repository: AbdullahSalimee/ams-backups
           token: ${{ secrets.BACKUP_REPO_TOKEN }}
           path: ams-backups
 
