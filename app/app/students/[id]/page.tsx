@@ -39,6 +39,7 @@ import {
 } from "@/lib/students/actions";
 import { StudentCombinedCard } from "@/components/templates/share/StudentCombinedCard";
 import { StudentIDCard } from "@/components/templates/pdf/StudentIDCard";
+import { ParentAccessButton } from "@/components/parent-portal/ParentAccessButton";
 import {
   shareElementAsImage,
   exportElementAsCardPDF,
@@ -620,6 +621,7 @@ export default function StudentProfilePage({
             >
               Generate ID
             </Button>
+            {role === "admin" && <ParentAccessButton studentId={id} />}
             <Link href={`/app/students/${id}/edit`}>
               <Button variant="secondary" size="sm" icon={<Edit size={14} />}>
                 Edit

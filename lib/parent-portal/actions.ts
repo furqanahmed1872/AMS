@@ -6,7 +6,12 @@ import {
   getParentSession,
   destroyParentSession,
 } from "./session";
-import type { ParentDashboardData, SubjectScore, AttendanceDay } from "./types";
+import type {
+  ParentDashboardData,
+  SubjectScore,
+  AttendanceDay,
+  ParentNotice,
+} from "./types";
 
 export interface ParentLoginResult {
   success: boolean;
@@ -83,6 +88,7 @@ export async function getParentDashboardData(
     testResultsRes,
     attendanceDaysRes,
     subjectsRes,
+    noticesRes,
   ] = await Promise.all([
     supabase
       .from("students")
@@ -127,6 +133,12 @@ export async function getParentDashboardData(
       .gte("date", `${year}-${String(month).padStart(2, "0")}-01`)
       .lte("date", `${year}-${String(month).padStart(2, "0")}-31`),
     supabase.from("subjects").select("name, class_id"),
+    supabase
+      .from("notices")
+      .select("class_id, title, message, created_at")
+      .eq("academy_id", session.academyId)
+      .order("created_at", { ascending: false })
+      .limit(20),
   ]);
 
   if (studentRes.error || !studentRes.data) return null;
@@ -178,6 +190,16 @@ export async function getParentDashboardData(
     (r) => ({ date: r.date, status: r.status as AttendanceDay["status"] }),
   );
 
+  const notices: ParentNotice[] = (noticesRes.data ?? [])
+    .filter(
+      (n) => n.class_id === null || n.class_id === studentRes.data.class_id,
+    )
+    .map((n) => ({
+      title: n.title,
+      message: n.message,
+      createdAt: n.created_at,
+    }));
+
   return {
     studentName: studentRes.data.name,
     rollNumber: studentRes.data.roll_number,
@@ -190,6 +212,7 @@ export async function getParentDashboardData(
     testAverage: testAvgRes.data?.avg_score_percent ?? null,
     subjectScores: Object.values(scoreGrouped),
     feeHistory: feeHistoryRes.data ?? [],
+    notices,
   };
 }
 

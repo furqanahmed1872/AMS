@@ -4,6 +4,7 @@ import {
   Wallet,
   LogOut,
   BookOpen,
+  Megaphone,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -172,6 +173,38 @@ function SubjectScores({
   );
 }
 
+function NoticesList({ notices }: { notices: ParentDashboardData["notices"] }) {
+  if (notices.length === 0) return null;
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Megaphone className="w-4 h-4 text-brand-400" />
+        <p className="text-sm font-medium text-white">Notices</p>
+      </div>
+      <div className="flex flex-col gap-3">
+        {notices.map((n, i) => (
+          <div
+            key={i}
+            className="border-b border-white/8 pb-3 last:border-0 last:pb-0"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">{n.title}</p>
+              <span className="text-[10px] text-white/30">
+                {new Date(n.createdAt).toLocaleDateString("en-PK", {
+                  dateStyle: "medium",
+                })}
+              </span>
+            </div>
+            <p className="text-sm text-white/60 mt-1 whitespace-pre-wrap break-words">
+              {n.message}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function ParentDashboard({ data }: { data: ParentDashboardData }) {
   return (
     <div className="min-h-screen bg-surface p-4">
@@ -197,6 +230,8 @@ export function ParentDashboard({ data }: { data: ParentDashboardData }) {
             </button>
           </form>
         </div>
+
+        <NoticesList notices={data.notices} />
 
         <div className="grid grid-cols-2 gap-3">
           <ProgressRing percent={data.attendancePercent} label="Attendance" />

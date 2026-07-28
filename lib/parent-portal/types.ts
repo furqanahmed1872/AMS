@@ -16,6 +16,12 @@ export interface AttendanceDay {
   status: "P" | "A" | "L";
 }
 
+export interface ParentNotice {
+  title: string;
+  message: string;
+  createdAt: string;
+}
+
 export interface ParentDashboardData {
   studentName: string;
   rollNumber: number;
@@ -28,4 +34,5 @@ export interface ParentDashboardData {
   testAverage: number | null;
   subjectScores: SubjectScore[];
   feeHistory: FeeHistoryEntry[];
+  notices: ParentNotice[];
 }

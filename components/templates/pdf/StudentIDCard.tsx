@@ -92,11 +92,22 @@ function Front({ data }: { data: StudentIDCardData }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 15,
               flexShrink: 0,
             }}
           >
-            🎓
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+              <path d="M6 12v5c3 3 9 3 12 0v-5" />
+            </svg>
           </div>
           <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2 }}>
             {data.academyName}
@@ -109,7 +120,6 @@ function Front({ data }: { data: StudentIDCardData }) {
             marginTop: 28,
             display: "flex",
             gap: 20,
-            flex: 1,
           }}
         >
           {/* Photo placeholder */}
@@ -180,9 +190,15 @@ function Front({ data }: { data: StudentIDCardData }) {
           </div>
         </div>
 
-        {/* Footer strip */}
+        {/* Footer strip — pinned to the bottom of the card regardless of
+            how much body content there is, instead of relying on flex:1
+            to push it down (which left a large empty gap on short cards) */}
         <div
           style={{
+            position: "absolute",
+            left: 24,
+            right: 24,
+            bottom: 18,
             borderTop: "1px solid #e5e7eb",
             paddingTop: 10,
             display: "flex",
@@ -227,7 +243,7 @@ function Back({ data }: { data: StudentIDCardData }) {
           Contact Information
         </div>
 
-        <div style={{ marginTop: 26, flex: 1 }}>
+        <div style={{ marginTop: 26 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
               <div
@@ -292,8 +308,14 @@ function Back({ data }: { data: StudentIDCardData }) {
           </div>
         </div>
 
+        {/* Footer — pinned to the bottom of the card regardless of body
+            content height, same fix as the front face */}
         <div
           style={{
+            position: "absolute",
+            left: 24,
+            right: 24,
+            bottom: 18,
             borderTop: "1px solid #e5e7eb",
             paddingTop: 10,
             display: "flex",
@@ -347,4 +369,9 @@ export function StudentIDCard({ data }: { data: StudentIDCardData }) {
   );
 }
 
+// Exported so a visible, scaled-down preview can reuse the exact same
+// markup that gets captured off-screen for the PDF — this guarantees the
+// preview always matches what actually prints, instead of drifting apart
+// as two separately-maintained layouts.
+export { Front as StudentIDCardFront, Back as StudentIDCardBack };
 export type { StudentIDCardData };

@@ -194,3 +194,76 @@ export async function shareElementAsImage(
     URL.revokeObjectURL(url);
   }, "image/png");
 }
+
+// ─────────────────────────────────────────────────────────────────
+// shareElementAsImageToPhone — same capture as shareElementAsImage, but
+// reports back which path was taken instead of handling everything
+// internally. FeeReceiptModal needs this because on desktop it must
+// open a *second*, separate step (a pre-filled wa.me link to a specific
+// parent phone number, built by buildReceiptWhatsAppLink) after the
+// image downloads — there's no way to attach a file to a wa.me link, so
+// the parent has to attach the just-downloaded image manually in
+// WhatsApp Web. On mobile, the Web Share API handles image + text
+// together in one native share sheet, so no second step is needed.
+// ─────────────────────────────────────────────────────────────────
+export interface ShareToPhoneResult {
+  method: "shared" | "cancelled" | "download+link";
+}
+
+export async function shareElementAsImageToPhone(
+  elementId: string,
+  text: string,
+  filename: string,
+): Promise<ShareToPhoneResult> {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.error(`Element #${elementId} not found`);
+    return { method: "download+link" };
+  }
+
+  const html2canvas = (await import("html2canvas")).default;
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+  });
+
+  return new Promise((resolve) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        resolve({ method: "download+link" });
+        return;
+      }
+
+      const file = new File([blob], `${filename}.png`, { type: "image/png" });
+
+      // Mobile: native share sheet can carry the image + text together —
+      // no separate wa.me step needed.
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text, title: "Fee Receipt" });
+          resolve({ method: "shared" });
+          return;
+        } catch (err) {
+          if ((err as Error).name === "AbortError") {
+            resolve({ method: "cancelled" });
+            return;
+          }
+          // Any other share error — fall through to the download path.
+        }
+      }
+
+      // Desktop (or share unsupported/failed): download the image now,
+      // then let the caller open the pre-filled wa.me link as a second
+      // step so the parent can attach the image manually.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      resolve({ method: "download+link" });
+    }, "image/png");
+  });
+}
