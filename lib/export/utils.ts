@@ -48,6 +48,91 @@ export async function exportElementAsPDF(
   pdf.save(`${filename}.pdf`);
 }
 
+// ─────────────────────────────────────────────────────────────────
+// exportElementAsCardPDF — for content sized like a physical card
+// (e.g. Student ID cards) rather than a full page. Places the
+// element(s) at true CR80 print dimensions (85.6mm × 54mm) instead of
+// stretching to fill an A4 page, which is what exportElementAsPDF does.
+//
+// Renders each `elementIds` entry on its own page at card size, centered,
+// so front/back can be printed as two consecutive pages of one PDF.
+// ─────────────────────────────────────────────────────────────────
+const CARD_WIDTH_MM = 85.6;
+const CARD_HEIGHT_MM = 54;
+
+export async function exportElementAsCardPDF(
+  elementIds: string[],
+  filename: string,
+): Promise<void> {
+  const elements = elementIds
+    .map((id) => document.getElementById(id))
+    .filter((el): el is HTMLElement => el !== null);
+
+  if (elements.length === 0) {
+    console.error(`None of the elements [${elementIds.join(", ")}] were found`);
+    return;
+  }
+
+  const html2canvas = (await import("html2canvas")).default;
+  const { jsPDF } = await import("jspdf");
+
+  const pdf: JsPDFType = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: [CARD_WIDTH_MM, CARD_HEIGHT_MM],
+  });
+
+  for (let i = 0; i < elements.length; i++) {
+    const canvas = await html2canvas(elements[i], {
+      scale: 4, // higher scale since the physical output is small
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    if (i > 0) pdf.addPage([CARD_WIDTH_MM, CARD_HEIGHT_MM], "landscape");
+    pdf.addImage(imgData, "PNG", 0, 0, CARD_WIDTH_MM, CARD_HEIGHT_MM);
+  }
+
+  pdf.save(`${filename}.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// exportElementAsPNG — plain PNG download of a DOM element, no share
+// sheet involved. Used where the user wants a print-ready image file
+// rather than triggering the WhatsApp share flow (e.g. ID cards meant
+// for a print shop).
+// ─────────────────────────────────────────────────────────────────
+export async function exportElementAsPNG(
+  elementId: string,
+  filename: string,
+): Promise<void> {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.error(`Element #${elementId} not found`);
+    return;
+  }
+
+  const html2canvas = (await import("html2canvas")).default;
+  const canvas = await html2canvas(element, {
+    scale: 4,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+  });
+
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, "image/png");
+}
+
 // lib/export/share.ts
 // Captures a DOM element as a PNG image and shares via WhatsApp.
 // Uses the Web Share API on mobile (primary device per PRD §12.2),
@@ -108,58 +193,4 @@ export async function shareElementAsImage(
     a.click();
     URL.revokeObjectURL(url);
   }, "image/png");
-}
-
-/**
- * Same capture as shareElementAsImage, but always tries Web Share API
- * first (image + text together — WhatsApp shows both when the user
- * picks a contact), and on desktop falls back to downloading the image
- * plus opening a wa.me text-only link as a second tab, since desktop
- * WhatsApp Web has no reliable way to pre-attach an image via URL.
- */
-export async function shareElementAsImageToPhone(
-  elementId: string,
-  text: string,
-  filename: string,
-): Promise<{ method: "share" | "download+link" | "failed" }> {
-  const element = document.getElementById(elementId);
-  if (!element) {
-    console.error(`Element #${elementId} not found`);
-    return { method: "failed" };
-  }
-
-  const html2canvas = (await import("html2canvas")).default;
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: "#ffffff",
-    logging: false,
-  });
-
-  return new Promise((resolve) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) return resolve({ method: "failed" });
-
-      const file = new File([blob], `${filename}.png`, { type: "image/png" });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], text, title: filename });
-          return resolve({ method: "share" });
-        } catch (err) {
-          if ((err as Error).name === "AbortError")
-            return resolve({ method: "failed" });
-        }
-      }
-
-      // Desktop fallback: download the image, caller opens wa.me text link separately.
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-      resolve({ method: "download+link" });
-    }, "image/png");
-  });
 }

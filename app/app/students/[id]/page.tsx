@@ -8,7 +8,9 @@ import {
   BarChart3,
   BookOpen,
   CalendarDays,
+  CreditCard,
   DollarSign,
+  Download,
   Edit,
   MapPin,
   Phone,
@@ -36,8 +38,11 @@ import {
   type ScoreBySubject,
 } from "@/lib/students/actions";
 import { StudentCombinedCard } from "@/components/templates/share/StudentCombinedCard";
-import { ParentAccessButton } from "@/components/parent-portal/ParentAccessButton";
-import { shareElementAsImage } from "@/lib/export/utils";
+import { StudentIDCard } from "@/components/templates/pdf/StudentIDCard";
+import {
+  shareElementAsImage,
+  exportElementAsCardPDF,
+} from "@/lib/export/utils";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 // ─── Pure helpers (no hooks, no side-effects) ─────────────────────────────────
@@ -415,7 +420,7 @@ export default function StudentProfilePage({
 }) {
   const { id } = React.use(params);
   const router = useRouter();
-  const { role, students, academyName } = useAcademyData();
+  const { role, students, academyName, academyId } = useAcademyData();
   const student = students.find((s) => s.id === id);
 
   // ── Modal state ───────────────────────────────────────────────────────────────
@@ -449,6 +454,8 @@ export default function StudentProfilePage({
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [showIDCard, setShowIDCard] = useState(false);
+  const [exportingID, setExportingID] = useState(false);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -496,6 +503,16 @@ export default function StudentProfilePage({
     );
     setSharing(false);
   }, [id, student, scores, attendance]);
+
+  const handleDownloadID = useCallback(async () => {
+    if (!student) return;
+    setExportingID(true);
+    await exportElementAsCardPDF(
+      ["student-id-card-front", "student-id-card-back"],
+      `ID_Card_${student.name.replace(/\s+/g, "_")}`,
+    );
+    setExportingID(false);
+  }, [student]);
 
   const handleDeactivate = useCallback(async () => {
     if (!student) return;
@@ -590,12 +607,19 @@ export default function StudentProfilePage({
                 Deactivate
               </Button>
             )}
-            {role === "admin" && <ParentAccessButton studentId={id} />}
             <Link href={`/app/students/${id}/analytics`}>
               <Button variant="ghost" size="sm" icon={<BarChart3 size={14} />}>
                 Analytics
               </Button>
             </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<CreditCard size={14} />}
+              onClick={() => setShowIDCard(true)}
+            >
+              Generate ID
+            </Button>
             <Link href={`/app/students/${id}/edit`}>
               <Button variant="secondary" size="sm" icon={<Edit size={14} />}>
                 Edit
@@ -849,6 +873,29 @@ export default function StudentProfilePage({
         </Modal>
       )}
 
+      {/* ══ ID CARD MODAL ════════════════════════════════════════════════════ */}
+      <Modal
+        isOpen={showIDCard}
+        onClose={() => setShowIDCard(false)}
+        title="Student ID Card"
+        size="md"
+      >
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-sm text-white/50 text-center">
+            Generates a printable front-and-back ID card (standard CR80 card
+            size) as a PDF.
+          </p>
+          <Button
+            className="w-full"
+            icon={<Download size={14} />}
+            loading={exportingID}
+            onClick={handleDownloadID}
+          >
+            Download ID Card PDF
+          </Button>
+        </div>
+      </Modal>
+
       {/* ══ DEACTIVATE CONFIRM ═══════════════════════════════════════════════ */}
       <ConfirmDialog
         isOpen={showDeactivate}
@@ -871,6 +918,22 @@ export default function StudentProfilePage({
         attendancePercent={student.attendancePercent}
         scores={scores ?? []}
         months={attendance ?? []}
+      />
+
+      {/* ══ HIDDEN ID CARD (off-screen, html2canvas target) ═════════════════ */}
+      <StudentIDCard
+        data={{
+          academyName,
+          studentName: student.name,
+          fatherName: student.fatherName,
+          className: student.class,
+          rollNumber: student.rollNumber,
+          admissionDate: formatDate(student.admissionDate),
+          phone: student.phone,
+          address: student.address,
+          academyId,
+          studentIdShort: student.id.slice(0, 8),
+        }}
       />
     </div>
   );
