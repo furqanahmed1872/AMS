@@ -1,4 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { getBranchesForAcademy } from "@/lib/branches/actions";
+import { isAllBranches, type BranchScope } from "@/lib/branches/types";
 import type {
   AcademyBootstrapData,
   ClassItem,
@@ -7,6 +9,21 @@ import type {
   Test,
   Notification,
 } from "./types";
+
+/**
+ * Branch scoping helper. `branchFilter()` returns the column/value pair
+ * every branch-aware query spreads into `.match()` — one place to change
+ * if the scoping rule ever does. `subjects` stays academy-wide by design
+ * (a subject like "Math" applies to the whole academy, not one campus).
+ */
+function branchFilter(
+  academyId: string,
+  branchId: BranchScope,
+): Record<string, string> {
+  return isAllBranches(branchId)
+    ? { academy_id: academyId }
+    : { academy_id: academyId, branch_id: branchId as string };
+}
 
 interface ClassRow {
   id: string;
@@ -27,13 +44,16 @@ const displayName = (cls: ClassRow) =>
  */
 export async function getAcademyBootstrapData(
   academyId: string,
+  branchId: BranchScope = "all",
 ): Promise<AcademyBootstrapData> {
   const supabase = createServiceClient();
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
+  const scope = branchFilter(academyId, branchId);
 
   const [
+    branches,
     classesRes,
     subjectsRes,
     studentsRes,
@@ -45,11 +65,8 @@ export async function getAcademyBootstrapData(
     notificationsRes,
     todaysAttendanceRes,
   ] = await Promise.all([
-    supabase
-      .from("classes")
-      .select("*")
-      .eq("academy_id", academyId)
-      .order("name"),
+    getBranchesForAcademy(academyId),
+    supabase.from("classes").select("*").match(scope).order("name"),
     supabase
       .from("subjects")
       .select("*")
@@ -58,15 +75,13 @@ export async function getAcademyBootstrapData(
     supabase
       .from("students")
       .select("*")
-      .eq("academy_id", academyId)
+      .match(scope)
       .order("class_id")
       .order("roll_number"),
     supabase
       .from("fee_records")
       .select("student_id, status, amount_due")
-      .eq("academy_id", academyId)
-      .eq("month", month)
-      .eq("year", year),
+      .match({ ...scope, month, year }),
     supabase
       .from("v_student_test_average")
       .select("*")
@@ -78,23 +93,21 @@ export async function getAcademyBootstrapData(
     supabase
       .from("tests")
       .select("*")
-      .eq("academy_id", academyId)
+      .match(scope)
       .order("date", { ascending: false }),
     supabase
       .from("test_results")
       .select("test_id, marks_obtained, is_absent")
-      .eq("academy_id", academyId),
+      .match(scope),
     supabase
       .from("notifications")
       .select("*")
-      .eq("academy_id", academyId)
-      .eq("is_resolved", false)
+      .match({ ...scope, is_resolved: false })
       .order("created_at", { ascending: false }),
     supabase
       .from("attendance_records")
       .select("status, class_id")
-      .eq("academy_id", academyId)
-      .eq("date", now.toISOString().split("T")[0]),
+      .match({ ...scope, date: now.toISOString().split("T")[0] }),
   ]);
 
   for (const res of [
@@ -175,6 +188,7 @@ export async function getAcademyBootstrapData(
       teacherRemarks: s.teacher_remarks ?? undefined,
       avgScore: avgScoreByStudent.get(s.id) ?? 0,
       attendancePercent: attendanceByStudent.get(s.id) ?? 0,
+      branchId: s.branch_id ?? null,
     };
   });
 
@@ -185,6 +199,7 @@ export async function getAcademyBootstrapData(
     section: c.section ?? undefined,
     displayName: displayName(c),
     studentCount: activeStudentCountByClass.get(c.id) ?? 0,
+    branchId: c.branch_id ?? null,
   }));
 
   // ---------- Subjects ----------
@@ -246,6 +261,7 @@ export async function getAcademyBootstrapData(
     .reduce((sum, f) => sum + Number(f.amount_due), 0);
 
   return {
+    branches,
     classes,
     subjects,
     students,

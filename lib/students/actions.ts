@@ -46,6 +46,18 @@ export async function createStudentAction(formData: {
 
   const supabase = createServiceClient();
 
+  // A student inherits the branch of the class they're enrolled in — the
+  // class is the single source of truth, so the two can never diverge.
+  const { data: targetClass } = await supabase
+    .from("classes")
+    .select("branch_id")
+    .eq("id", classId)
+    .eq("academy_id", session.academyId)
+    .single();
+
+  if (!targetClass)
+    return { success: false, error: "Class not found in this academy." };
+
   // Auto-assign roll number if not provided
   let finalRollNumber = parseInt(rollNumber, 10);
   if (!finalRollNumber || isNaN(finalRollNumber)) {
@@ -63,6 +75,7 @@ export async function createStudentAction(formData: {
     .from("students")
     .insert({
       academy_id: session.academyId,
+      branch_id: targetClass.branch_id,
       class_id: classId,
       name: name.trim(),
       father_name: fatherName.trim() || null,
@@ -103,6 +116,7 @@ export async function createStudentAction(formData: {
 
     await supabase.from("notifications").insert({
       academy_id: session.academyId,
+      branch_id: targetClass.branch_id,
       type: "fee_not_set",
       student_id: data.id,
       message: `New student '${name.trim()}' added to ${className} by Teacher — fee not set.`,
@@ -164,12 +178,22 @@ export async function updateStudentAction(
     .eq("academy_id", session.academyId)
     .single();
 
+  // Re-resolve branch from the (possibly changed) class so moving a
+  // student between branches is just a class change.
+  const { data: targetClass } = await supabase
+    .from("classes")
+    .select("branch_id")
+    .eq("id", classId)
+    .eq("academy_id", session.academyId)
+    .single();
+
   const { error } = await supabase
     .from("students")
     .update({
       name: name.trim(),
       father_name: fatherName.trim() || null,
       class_id: classId,
+      branch_id: targetClass?.branch_id ?? null,
       roll_number: parseInt(rollNumber, 10),
       monthly_fee: monthlyFee ? parseFloat(monthlyFee) : null,
       admission_date: admissionDate,

@@ -10,15 +10,19 @@ import {
   FileText,
   BarChart3,
   BookOpen,
+  PieChart,
   LogOut,
   Bell,
   GraduationCap,
   X,
   Menu,
   Megaphone,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { logoutAction } from "@/lib/auth/actions";
+import { BranchSwitcher } from "@/components/branches/BranchSwitcher";
+import type { Branch, BranchScope } from "@/lib/branches/types";
 
 interface NavItem {
   href: string;
@@ -65,18 +69,28 @@ const navItems: NavItem[] = [
     icon: <GraduationCap size={18} />,
   },
   { href: "/app/notices", label: "Notices", icon: <Megaphone size={18} /> },
+  {
+    href: "/app/analytics",
+    label: "Analytics",
+    icon: <PieChart size={18} />,
+    adminOnly: true,
+  },
 ];
 
 interface SidebarProps {
   role?: "admin" | "teacher";
   notifications?: number;
   academyName?: string;
+  branches?: Branch[];
+  activeBranchId?: BranchScope;
 }
 
 export function Sidebar({
   role = "admin",
   notifications = 1,
   academyName = "Academy",
+  branches = [],
+  activeBranchId = "all",
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -107,6 +121,32 @@ export function Sidebar({
           </div>
         </div>
       </div>
+
+      {/* Branch scope */}
+      {branches.length > 0 && (
+        <div className="px-4 pt-4 space-y-1.5">
+          <BranchSwitcher
+            branches={branches}
+            activeBranchId={activeBranchId}
+            canViewAll={role === "admin"}
+          />
+          {role === "admin" && (
+            <Link
+              href="/app/branches"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                pathname.startsWith("/app/branches")
+                  ? "nav-item-active"
+                  : "nav-item",
+                "text-xs py-2",
+              )}
+            >
+              <Settings size={14} />
+              <span className="flex-1">Manage Branches</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

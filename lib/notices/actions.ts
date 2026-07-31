@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
+import { branchIdForClass, fallbackBranchId } from "@/lib/branches/scope";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -64,8 +65,13 @@ export async function createNoticeAction(formData: {
   if (!message.trim()) return { success: false, error: "Message is required." };
 
   const supabase = createServiceClient();
+  const branchId = classId
+    ? await branchIdForClass(supabase, session.academyId, classId)
+    : await fallbackBranchId(supabase, session.academyId, session.branchId);
+
   const { error } = await supabase.from("notices").insert({
     academy_id: session.academyId,
+    branch_id: branchId,
     class_id: classId,
     title: title.trim(),
     message: message.trim(),
