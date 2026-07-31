@@ -6,6 +6,7 @@ import {
   getParentSession,
   destroyParentSession,
 } from "./session";
+import { getUpcomingExamsForStudent } from "@/lib/exam-schedule/actions";
 import type {
   ParentDashboardData,
   SubjectScore,
@@ -92,7 +93,7 @@ export async function getParentDashboardData(
   ] = await Promise.all([
     supabase
       .from("students")
-      .select("name, roll_number, class_id, monthly_fee")
+      .select("name, roll_number, class_id, monthly_fee, branch_id")
       .eq("id", session.studentId)
       .single(),
     supabase
@@ -200,6 +201,15 @@ export async function getParentDashboardData(
       createdAt: n.created_at,
     }));
 
+  // Resolved server-side using the same class > branch > academy-wide
+  // precedence the exam was scheduled with — see
+  // lib/exam-schedule/actions.ts.
+  const upcomingExams = await getUpcomingExamsForStudent(
+    session.academyId,
+    studentRes.data.class_id,
+    studentRes.data.branch_id,
+  );
+
   return {
     studentName: studentRes.data.name,
     rollNumber: studentRes.data.roll_number,
@@ -213,6 +223,7 @@ export async function getParentDashboardData(
     subjectScores: Object.values(scoreGrouped),
     feeHistory: feeHistoryRes.data ?? [],
     notices,
+    upcomingExams,
   };
 }
 

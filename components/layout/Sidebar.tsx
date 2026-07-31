@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
+  CalendarDays,
   DollarSign,
   FileText,
   BarChart3,
@@ -64,6 +65,11 @@ const navItems: NavItem[] = [
     icon: <BarChart3 size={18} />,
   },
   { href: "/app/results", label: "Results", icon: <BarChart3 size={18} /> },
+  {
+    href: "/app/exam-schedule",
+    label: "Exam Schedule",
+    icon: <CalendarDays size={18} />,
+  },
   {
     href: "/app/classes",
     label: "Classes & Subjects",

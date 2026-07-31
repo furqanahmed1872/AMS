@@ -22,6 +22,18 @@ export interface ParentNotice {
   createdAt: string;
 }
 
+// From lib/exam-schedule/actions.ts — resolved to "does this apply to
+// this student" server-side before it ever reaches the client.
+export interface ParentExamNotice {
+  examName: string;
+  subjectName: string;
+  examDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  venue: string | null;
+  notes: string | null;
+}
+
 export interface ParentDashboardData {
   studentName: string;
   rollNumber: number;
@@ -35,4 +47,5 @@ export interface ParentDashboardData {
   subjectScores: SubjectScore[];
   feeHistory: FeeHistoryEntry[];
   notices: ParentNotice[];
+  upcomingExams: ParentExamNotice[];
 }

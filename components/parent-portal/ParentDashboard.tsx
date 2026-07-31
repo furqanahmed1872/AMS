@@ -1,10 +1,12 @@
 import {
   CalendarCheck,
+  CalendarClock,
   GraduationCap,
   Wallet,
   LogOut,
   BookOpen,
   Megaphone,
+  MapPin,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -205,6 +207,78 @@ function NoticesList({ notices }: { notices: ParentDashboardData["notices"] }) {
   );
 }
 
+// Resolved server-side (class > branch > academy-wide) before this ever
+// reaches the client — see getUpcomingExamsForStudent() in
+// lib/exam-schedule/actions.ts. This component just renders what it's given.
+function UpcomingExams({
+  exams,
+}: {
+  exams: ParentDashboardData["upcomingExams"];
+}) {
+  if (exams.length === 0) return null;
+
+  const formatTime = (t: string | null) => {
+    if (!t) return null;
+    const [h, m] = t.split(":");
+    const hour = parseInt(h, 10);
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${displayHour}:${m} ${suffix}`;
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <CalendarClock className="w-4 h-4 text-brand-400" />
+        <p className="text-sm font-medium text-white">Upcoming Exams</p>
+      </div>
+      <div className="flex flex-col gap-3">
+        {exams.map((e, i) => {
+          const start = formatTime(e.startTime);
+          const end = formatTime(e.endTime);
+          return (
+            <div
+              key={i}
+              className="border-b border-white/8 pb-3 last:border-0 last:pb-0"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-white truncate">
+                  {e.examName} · {e.subjectName}
+                </p>
+                <span className="text-[10px] text-white/30 shrink-0">
+                  {new Date(e.examDate).toLocaleDateString("en-PK", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                {(start || end) && (
+                  <span className="text-xs text-white/50">
+                    {start ?? "—"}
+                    {end ? ` – ${end}` : ""}
+                  </span>
+                )}
+                {e.venue && (
+                  <span className="flex items-center gap-1 text-xs text-white/50">
+                    <MapPin className="w-3 h-3" />
+                    {e.venue}
+                  </span>
+                )}
+              </div>
+              {e.notes && (
+                <p className="text-sm text-white/60 mt-1 whitespace-pre-wrap break-words">
+                  {e.notes}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 export function ParentDashboard({ data }: { data: ParentDashboardData }) {
   return (
     <div className="min-h-screen bg-surface p-4">
@@ -232,6 +306,7 @@ export function ParentDashboard({ data }: { data: ParentDashboardData }) {
         </div>
 
         <NoticesList notices={data.notices} />
+        <UpcomingExams exams={data.upcomingExams} />
 
         <div className="grid grid-cols-2 gap-3">
           <ProgressRing percent={data.attendancePercent} label="Attendance" />
