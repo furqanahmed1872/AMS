@@ -18,6 +18,7 @@ import {
   Menu,
   Megaphone,
   Settings,
+  Briefcase,
 } from "lucide-react";
 import { useState } from "react";
 import { logoutAction } from "@/lib/auth/actions";
@@ -69,6 +70,12 @@ const navItems: NavItem[] = [
     icon: <GraduationCap size={18} />,
   },
   { href: "/app/notices", label: "Notices", icon: <Megaphone size={18} /> },
+  {
+    href: "/app/teachers",
+    label: "Teachers",
+    icon: <Briefcase size={18} />,
+    adminOnly: true,
+  },
   {
     href: "/app/analytics",
     label: "Analytics",
