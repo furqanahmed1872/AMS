@@ -11,6 +11,8 @@ import {
   type TestRecordTest,
   type TestRecordRow,
 } from "@/lib/tests/actions";
+import { getTeachersAction } from "@/lib/teachers/queries";
+import type { Teacher } from "@/lib/teachers/types";
 import { Download } from "lucide-react";
 import { TestRecordPDF } from "@/components/templates/pdf/TestRecordPDF";
 import { exportElementAsPDF } from "@/lib/export/utils";
@@ -34,6 +36,7 @@ export default function TestRecordPage() {
   const [cls, setCls] = useState(classes[0]?.id ?? "");
   const [subject, setSubject] = useState(subjects[0]?.id ?? "");
   const [teacherName, setTeacherName] = useState("");
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [tests, setTests] = useState<TestRecordTest[]>([]);
   const [rows, setRows] = useState<TestRecordRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +65,12 @@ export default function TestRecordPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    getTeachersAction().then((all) =>
+      setTeachers(all.filter((t) => t.status === "active")),
+    );
+  }, []);
 
   // SVG graph helpers
   const W = 500;
@@ -136,10 +145,16 @@ export default function TestRecordPage() {
           <Input
             label="Teacher Name (for export)"
             placeholder="e.g. Ali Ahmed"
+            list="test-record-teacher-names"
             value={teacherName}
             onChange={(e) => setTeacherName(e.target.value)}
             className="h-10.5 min-w-44"
           />
+          <datalist id="test-record-teacher-names">
+            {teachers.map((t) => (
+              <option key={t.id} value={t.name} />
+            ))}
+          </datalist>
         </div>
       </Card>
 
@@ -187,8 +202,7 @@ export default function TestRecordPage() {
                 {tests.map((t) => (
                   <th key={t.id} className="table-header text-center min-w-20">
                     {t.name}
-            
-                    
+
                     <br />
                     <span className="text-white/25 text-xs font-normal">
                       {new Date(t.date).toLocaleDateString("en-PK", {

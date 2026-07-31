@@ -2,6 +2,8 @@
 // shapes every page already renders against. Once a page is wired to
 // useAcademyData(), its dummy-data import can be deleted.
 
+import type { Branch, BranchScope } from "@/lib/branches/types";
+
 export type Role = "admin" | "teacher";
 
 export interface Student {
@@ -20,6 +22,7 @@ export interface Student {
   teacherRemarks?: string;
   avgScore: number; // derived — PRD §11.2
   attendancePercent: number; // derived — PRD §11.2
+  branchId: string | null;
 }
 
 export interface ClassItem {
@@ -28,6 +31,7 @@ export interface ClassItem {
   section?: string;
   displayName: string;
   studentCount: number; // derived
+  branchId: string | null;
 }
 
 export interface Subject {
@@ -77,6 +81,7 @@ export interface TodaysAttendance {
 }
 
 export interface AcademyBootstrapData {
+  branches: Branch[];
   classes: ClassItem[];
   subjects: Subject[];
   students: Student[];
@@ -91,4 +96,6 @@ export interface AcademyContextValue extends AcademyBootstrapData {
   role: Role;
   academyId: string;
   academyName: string;
+  /** Branch the current session is scoped to — "all" means academy-wide. */
+  branchId: BranchScope;
 }

@@ -78,10 +78,20 @@ export async function loginAction(
     }
   }
 
+  // Scope the new session to the academy's primary branch by default.
+  // Admins can widen to "all" (or switch) from the branch switcher.
+  const { data: primaryBranch } = await supabase
+    .from("branches")
+    .select("id")
+    .eq("academy_id", matchedAcademy.id)
+    .eq("is_primary", true)
+    .maybeSingle();
+
   await createSession({
     academyId: matchedAcademy.id,
     academyName: matchedAcademy.name,
     role,
+    branchId: role === "admin" ? "all" : (primaryBranch?.id ?? "all"),
   });
 
   // Realtime auth: a short-lived JWT carrying academy_id, so RLS policies

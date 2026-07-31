@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
+import { branchIdForClass } from "@/lib/branches/scope";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -35,10 +36,13 @@ export async function createTestAction(form: {
     return { success: false, error: "Total marks must be greater than 0." };
 
   const supabase = createServiceClient();
+  const branchId = await branchIdForClass(supabase, session.academyId, classId);
+
   const { data, error } = await supabase
     .from("tests")
     .insert({
       academy_id: session.academyId,
+      branch_id: branchId,
       class_id: classId,
       subject_id: subjectId,
       name: name.trim(),
@@ -106,8 +110,18 @@ export async function saveMarksAction(
     return { success: false, error: "No entries to save." };
 
   const supabase = createServiceClient();
+
+  // test_results inherit the parent test's branch
+  const { data: parentTest } = await supabase
+    .from("tests")
+    .select("branch_id")
+    .eq("id", testId)
+    .eq("academy_id", session.academyId)
+    .single();
+
   const rows = entries.map((e) => ({
     academy_id: session.academyId,
+    branch_id: parentTest?.branch_id ?? null,
     test_id: testId,
     student_id: e.studentId,
     marks_obtained: e.isAbsent ? null : e.marksObtained,

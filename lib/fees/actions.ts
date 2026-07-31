@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
+import { branchIdForStudent } from "@/lib/branches/scope";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -47,6 +48,11 @@ export async function markFeePaidAction(
     // Insert a new record if one doesn't exist
     const { error } = await supabase.from("fee_records").insert({
       academy_id: session.academyId,
+      branch_id: await branchIdForStudent(
+        supabase,
+        session.academyId,
+        studentId,
+      ),
       student_id: studentId,
       month,
       year,
@@ -81,7 +87,7 @@ export async function generateMonthlyFeesAction(
   // Get all active students with a fee set
   const { data: students, error: studentsError } = await supabase
     .from("students")
-    .select("id, monthly_fee")
+    .select("id, monthly_fee, branch_id")
     .eq("academy_id", session.academyId)
     .eq("status", "active")
     .not("monthly_fee", "is", null);
@@ -102,6 +108,7 @@ export async function generateMonthlyFeesAction(
     .filter((s) => !existingIds.has(s.id))
     .map((s) => ({
       academy_id: session.academyId,
+      branch_id: s.branch_id ?? null,
       student_id: s.id,
       month,
       year,

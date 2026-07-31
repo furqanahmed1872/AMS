@@ -3,11 +3,28 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Users, Calendar, DollarSign, FileText,
-  BarChart3, BookOpen, LogOut, Bell, GraduationCap, X, Menu
+  LayoutDashboard,
+  Users,
+  Calendar,
+  CalendarDays,
+  DollarSign,
+  FileText,
+  BarChart3,
+  BookOpen,
+  PieChart,
+  LogOut,
+  Bell,
+  GraduationCap,
+  X,
+  Menu,
+  Megaphone,
+  Settings,
+  Briefcase,
 } from "lucide-react";
 import { useState } from "react";
 import { logoutAction } from "@/lib/auth/actions";
+import { BranchSwitcher } from "@/components/branches/BranchSwitcher";
+import type { Branch, BranchScope } from "@/lib/branches/types";
 
 interface NavItem {
   href: string;
@@ -18,29 +35,83 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/app/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  {
+    href: "/app/dashboard",
+    label: "Dashboard",
+    icon: <LayoutDashboard size={18} />,
+  },
   { href: "/app/students", label: "Students", icon: <Users size={18} /> },
-  { href: "/app/attendance", label: "Attendance", icon: <Calendar size={18} /> },
-  { href: "/app/fees", label: "Fees", icon: <DollarSign size={18} />, adminOnly: true },
-  { href: "/app/fee-record", label: "Fee Record", icon: <FileText size={18} />, adminOnly: true },
+  {
+    href: "/app/attendance",
+    label: "Attendance",
+    icon: <Calendar size={18} />,
+  },
+  {
+    href: "/app/fees",
+    label: "Fees",
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+  },
+  {
+    href: "/app/fee-record",
+    label: "Fee Record",
+    icon: <FileText size={18} />,
+    adminOnly: true,
+  },
   { href: "/app/tests", label: "Tests", icon: <BookOpen size={18} /> },
-  { href: "/app/test-record", label: "Test Record", icon: <BarChart3 size={18} /> },
+  {
+    href: "/app/test-record",
+    label: "Test Record",
+    icon: <BarChart3 size={18} />,
+  },
   { href: "/app/results", label: "Results", icon: <BarChart3 size={18} /> },
-  { href: "/app/classes", label: "Classes & Subjects", icon: <GraduationCap size={18} /> },
+  {
+    href: "/app/exam-schedule",
+    label: "Exam Schedule",
+    icon: <CalendarDays size={18} />,
+  },
+  {
+    href: "/app/classes",
+    label: "Classes & Subjects",
+    icon: <GraduationCap size={18} />,
+  },
+  { href: "/app/notices", label: "Notices", icon: <Megaphone size={18} /> },
+  {
+    href: "/app/teachers",
+    label: "Teachers",
+    icon: <Briefcase size={18} />,
+    adminOnly: true,
+  },
+  {
+    href: "/app/analytics",
+    label: "Analytics",
+    icon: <PieChart size={18} />,
+    adminOnly: true,
+  },
 ];
 
 interface SidebarProps {
   role?: "admin" | "teacher";
   notifications?: number;
   academyName?: string;
+  branches?: Branch[];
+  activeBranchId?: BranchScope;
 }
 
-export function Sidebar({ role = "admin", notifications = 1, academyName = "Academy" }: SidebarProps) {
+export function Sidebar({
+  role = "admin",
+  notifications = 1,
+  academyName = "Academy",
+  branches = [],
+  activeBranchId = "all",
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleItems = navItems.filter((item) => !item.adminOnly || role === "admin");
+  const visibleItems = navItems.filter(
+    (item) => !item.adminOnly || role === "admin",
+  );
 
   const handleSignOut = async () => {
     await logoutAction();
@@ -56,16 +127,45 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
             <GraduationCap size={18} className="text-white" />
           </div>
           <div>
-            <div className="font-bold text-sm font-display text-white">{academyName}</div>
+            <div className="font-bold text-sm font-display text-white">
+              {academyName}
+            </div>
             <div className="text-xs text-white/40 capitalize">{role} panel</div>
           </div>
         </div>
       </div>
 
+      {/* Branch scope */}
+      {branches.length > 0 && (
+        <div className="px-4 pt-4 space-y-1.5">
+          <BranchSwitcher
+            branches={branches}
+            activeBranchId={activeBranchId}
+            canViewAll={role === "admin"}
+          />
+          {role === "admin" && (
+            <Link
+              href="/app/branches"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                pathname.startsWith("/app/branches")
+                  ? "nav-item-active"
+                  : "nav-item",
+                "text-xs py-2",
+              )}
+            >
+              <Settings size={14} />
+              <span className="flex-1">Manage Branches</span>
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {visibleItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
@@ -75,7 +175,11 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
             >
               {item.icon}
               <span className="flex-1">{item.label}</span>
-              {item.badge && <span className="bg-brand-600/30 text-brand-400 text-xs px-1.5 py-0.5 rounded-full">{item.badge}</span>}
+              {item.badge && (
+                <span className="bg-brand-600/30 text-brand-400 text-xs px-1.5 py-0.5 rounded-full">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -87,10 +191,17 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
           <Link href="/app/notifications" className="nav-item relative">
             <Bell size={18} />
             <span className="flex-1">Notifications</span>
-            {notifications > 0 && <span className="bg-rose-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{notifications}</span>}
+            {notifications > 0 && (
+              <span className="bg-rose-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                {notifications}
+              </span>
+            )}
           </Link>
         )}
-        <button onClick={handleSignOut} className="nav-item text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 w-full">
+        <button
+          onClick={handleSignOut}
+          className="nav-item text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 w-full"
+        >
           <LogOut size={18} />
           Sign Out
         </button>
@@ -118,7 +229,10 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
           </div>
           <span className="font-bold text-sm font-display">{academyName}</span>
         </div>
-        <button onClick={() => setMobileOpen(true)} className="p-2 hover:bg-white/8 rounded-lg transition-colors">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2 hover:bg-white/8 rounded-lg transition-colors"
+        >
           <Menu size={20} />
         </button>
       </div>
@@ -126,13 +240,23 @@ export function Sidebar({ role = "admin", notifications = 1, academyName = "Acad
       {/* Mobile Drawer */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
           <aside className="absolute left-0 top-0 bottom-0 w-64 bg-surface-1 border-r border-white/8 flex flex-col animate-slide-down">
             <div className="flex items-center justify-between p-4 border-b border-white/8">
               <span className="font-bold font-display">Menu</span>
-              <button onClick={() => setMobileOpen(false)} className="p-1.5 hover:bg-white/10 rounded-lg"><X size={16} /></button>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1.5 hover:bg-white/10 rounded-lg"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="flex-1 overflow-y-auto"><SidebarContent /></div>
+            <div className="flex-1 overflow-y-auto">
+              <SidebarContent />
+            </div>
           </aside>
         </div>
       )}

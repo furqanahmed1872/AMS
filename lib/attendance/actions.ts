@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/server";
+import { branchIdForClass } from "@/lib/branches/scope";
 
 export type AttendanceStatus = "P" | "A" | "L";
 
@@ -60,9 +61,11 @@ export async function saveAttendanceAction(
     return { success: false, error: "No records to save." };
 
   const supabase = createServiceClient();
+  const branchId = await branchIdForClass(supabase, session.academyId, classId);
 
   const rows = records.map((r) => ({
     academy_id: session.academyId,
+    branch_id: branchId,
     student_id: r.studentId,
     class_id: classId,
     date,
