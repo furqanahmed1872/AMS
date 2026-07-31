@@ -21,13 +21,19 @@ export function AcademyDataProvider({
   value: AcademyContextValue;
   children: ReactNode;
 }) {
-  const { role, academyId, academyName, ...bootstrap } = value;
+  const { role, academyId, academyName, branchId, ...bootstrap } = value;
   const [data, dispatch] = useReducer(
     academyDataReducer,
     bootstrap as AcademyBootstrapData,
   );
 
-  const merged: AcademyContextValue = { ...data, role, academyId, academyName };
+  const merged: AcademyContextValue = {
+    ...data,
+    role,
+    academyId,
+    academyName,
+    branchId,
+  };
 
   return (
     <AcademyDataDispatchContext.Provider value={dispatch}>

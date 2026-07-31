@@ -61,51 +61,51 @@ export function academyDataReducer(
       })),
     };
   }
-const { table, event, newRow, oldRow } = action;
-switch (table) {
-  case "classes": {
-    const classes = patchClasses(state, event, newRow, oldRow);
-    return {
-      ...state,
-      classes,
-      dashboardStats: {
-        ...state.dashboardStats,
-        totalClasses: classes.length,
-      },
-    };
+  const { table, event, newRow, oldRow } = action;
+  switch (table) {
+    case "classes": {
+      const classes = patchClasses(state, event, newRow, oldRow);
+      return {
+        ...state,
+        classes,
+        dashboardStats: {
+          ...state.dashboardStats,
+          totalClasses: classes.length,
+        },
+      };
+    }
+    case "subjects":
+      return {
+        ...state,
+        subjects: patchSubjects(state, event, newRow, oldRow),
+      };
+    case "students": {
+      const students = patchStudents(state, event, newRow, oldRow);
+      return {
+        ...state,
+        students,
+        dashboardStats: {
+          ...state.dashboardStats,
+          activeStudents: students.filter((s) => s.status === "active").length,
+        },
+      };
+    }
+    case "tests": {
+      const tests = patchTests(state, event, newRow, oldRow);
+      return {
+        ...state,
+        tests,
+        dashboardStats: { ...state.dashboardStats, totalTests: tests.length },
+      };
+    }
+    case "notifications":
+      return {
+        ...state,
+        notifications: patchNotifications(state, event, newRow, oldRow),
+      };
+    default:
+      return state;
   }
-  case "subjects":
-    return {
-      ...state,
-      subjects: patchSubjects(state, event, newRow, oldRow),
-    };
-  case "students": {
-    const students = patchStudents(state, event, newRow, oldRow);
-    return {
-      ...state,
-      students,
-      dashboardStats: {
-        ...state.dashboardStats,
-        activeStudents: students.filter((s) => s.status === "active").length,
-      },
-    };
-  }
-  case "tests": {
-    const tests = patchTests(state, event, newRow, oldRow);
-    return {
-      ...state,
-      tests,
-      dashboardStats: { ...state.dashboardStats, totalTests: tests.length },
-    };
-  }
-  case "notifications":
-    return {
-      ...state,
-      notifications: patchNotifications(state, event, newRow, oldRow),
-    };
-  default:
-    return state;
-}
 }
 
 function patchClasses(
@@ -118,7 +118,12 @@ function patchClasses(
     const id = oldRow?.id as string;
     return state.classes.filter((c) => c.id !== id);
   }
-  const row = newRow as { id: string; name: string; section: string | null };
+  const row = newRow as {
+    id: string;
+    name: string;
+    section: string | null;
+    branch_id: string | null;
+  };
   const existing = state.classes.find((c) => c.id === row.id);
   const updated: ClassItem = {
     id: row.id,
@@ -126,6 +131,7 @@ function patchClasses(
     section: row.section ?? undefined,
     displayName: displayName(row.name, row.section),
     studentCount: existing?.studentCount ?? 0,
+    branchId: row.branch_id ?? null,
   };
   if (event === "INSERT") return [...state.classes, updated];
   return state.classes.map((c) => (c.id === row.id ? updated : c));
@@ -169,6 +175,7 @@ function patchStudents(
     monthly_fee: number | null;
     status: "active" | "inactive";
     teacher_remarks: string | null;
+    branch_id: string | null;
   };
   const cls = state.classes.find((c) => c.id === row.class_id);
   const existing = state.students.find((s) => s.id === row.id);
@@ -196,6 +203,7 @@ function patchStudents(
     teacherRemarks: row.teacher_remarks ?? undefined,
     avgScore: existing?.avgScore ?? 0,
     attendancePercent: existing?.attendancePercent ?? 0,
+    branchId: row.branch_id ?? null,
   };
 
   if (event === "INSERT") return [...state.students, updated];
